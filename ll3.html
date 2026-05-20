@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LL3. Multiplexoare și Demultiplexoare | ED 2026</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="hdr-logo">Laborator LL3 · Circuite Logice Combinationale · ED 2026</div>
+    <h1>Multiplexoare și <span>Demultiplexoare</span></h1>
+  </div>
+  <div class="hdr-right">
+    <span class="clbl">Varianta:</span>
+    <select id="varSel" onchange="applyVariant()">
+      <option value="1">1 — ȘI-2, NU</option>
+      <option value="2">2 — SAU-2, NU</option>
+      <option value="3">3 — ȘI-NU-3</option>
+      <option value="4">4 — SAU-NU-3</option>
+      <option value="5">5 — ȘI-NU-4</option>
+      <option value="6">6 — ȘI-NU-2</option>
+      <option value="7">7 — SAU-NU-4</option>
+      <option value="8">8 — SAU-NU-2</option>
+      <option value="9">9 — ȘI-4, NU</option>
+      <option value="10">10 — SAU-3, NU</option>
+    </select>
+    <span class="clbl" style="margin-left:8px">Circuit:</span>
+    <button id="btnMUX" onclick="setCircuit('MUX')" class="act">MUX 4:1</button>
+    <button id="btnDMUX" onclick="setCircuit('DMUX')">DMUX 1:4</button>
+  </div>
+</header>
+
+<div class="ctrl-bar">
+  <span class="clbl">Adresă:</span>
+  <span id="addrBtns" style="display:flex;gap:4px"></span>
+  <span class="clbl" style="margin-left:10px">Intrare date:</span>
+  <span id="inputVal" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent3);font-weight:bold">I=1</span>
+  <button onclick="toggleInput()" id="btnInput">Comută I (0↔1)</button>
+  <span class="clbl" style="margin-left:10px">Enable MUX (Ē):</span>
+  <span id="enableVal" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent);font-weight:bold">Ē=0 (activ)</span>
+  <button onclick="toggleEnable()" id="btnEnable">Comută Ē (0↔1)</button>
+  <span class="clbl" style="margin-left:10px">MUX → DMUX:</span>
+  <span id="muxInputsLbl" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2)">I₀=I₁=1</span>
+</div>
+
+<div class="app-body">
+  <div class="sidebar">
+    <div>
+      <div class="sec-title">Stare curentă</div>
+      <div class="dnum" id="addrDisp">A₁A₀=00</div>
+      <div style="margin-top:6px">
+        <div style="font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-bottom:4px">Biți adresă</div>
+        <div class="addr-row" id="addrBits"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Previzualizare circuit</div>
+      <div class="circuit-preview">
+        <div class="mux-box">
+          <div class="io-lines" id="muxInputDots"></div>
+          <div class="mux-label">MUX</div>
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)">→Y→</div>
+        <div class="dmux-box">
+          <div class="dmux-label">DMUX</div>
+          <div class="io-lines" id="dmuxOutputDots"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Ieșire activă</div>
+      <div id="outputDisplay" style="font-family:'Share Tech Mono',monospace;font-size:22px;color:var(--accent3);text-align:center;padding:8px;background:#070b15;border:1px solid var(--border);border-radius:4px;">Y = 1</div>
+    </div>
+
+    <div style="background:#070b15;border:1px solid var(--border);border-radius:4px;padding:10px;font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.8">
+      <div class="sec-title" style="margin-bottom:4px">Funcții active</div>
+      <div id="activeFunctions"></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('tabTruth',this)">Tabel Adevăr</button>
+      <button class="tab" onclick="showTab('tabKarnaugh',this)">Karnaugh</button>
+      <button class="tab" onclick="showTab('tabExpr',this)">Expresii</button>
+      <button class="tab" onclick="showTab('tabSchema',this)">Schema Logică</button>
+      <button class="tab" onclick="showTab('tabInfo',this)">Info Variantă</button>
+    </div>
+
+    <div id="tabTruth" class="tab-pane active">
+      <div id="truthContainer"></div>
+    </div>
+    <div id="tabKarnaugh" class="tab-pane">
+      <div id="karnaughContainer"></div>
+    </div>
+    <div id="tabExpr" class="tab-pane">
+      <div id="exprContainer"></div>
+    </div>
+    <div id="tabSchema" class="schema-pane">
+      <div class="schema-toolbar">
+        <button onclick="doZoom(1.18)">＋ Zoom</button>
+        <button onclick="doZoom(0.85)">－ Zoom</button>
+        <button onclick="resetView()">↺ Reset</button>
+        <button onclick="exportPNG()">⬇ PNG</button>
+        <span class="zinfo" id="zinfo">zoom: 100% | drag | scroll = zoom</span>
+      </div>
+      <div class="schema-body" id="schemaBody">
+        <canvas id="cv"></canvas>
+      </div>
+    </div>
+    <div id="tabInfo" class="tab-pane">
+      <div id="infoContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════
+
+// MUX truth table: Y = selected input by A1A0
+// For each address (0-3), which input I is passed
+// MUX: Y = Ē·(Ā₁Ā₀·I₀ + Ā₁A₀·I₁ + A₁Ā₀·I₂ + A₁A₀·I₃)
+
+// DMUX outputs: Y0=I·Ā₁·Ā₀, Y1=I·Ā₁·A₀, Y2=I·A₁·Ā₀, Y3=I·A₁·A₀
+
+// FMD for MUX outputs (for Karnaugh): Y depends on address bits
+// MUX Karnaugh: rows=A1A0 (00,01,10,11), cols=I (0,1)
+// Y = I when selected, 0 otherwise (simplified: Y = I for selected channel)
+
+const VARIANTS = {
+  1: {label:'ȘI-2, NU',   gate:'AND', fanin:2, negGate:false, useNOT:true,  desc:'AND cu 2 intrări + NOT'},
+  2: {label:'SAU-2, NU',  gate:'OR',  fanin:2, negGate:false, useNOT:true,  desc:'OR cu 2 intrări + NOT'},
+  3: {label:'ȘI-NU-3',    gate:'AND', fanin:3, negGate:true,  useNOT:false, desc:'NAND cu 3 intrări'},
+  4: {label:'SAU-NU-3',   gate:'OR',  fanin:3, negGate:true,  useNOT:false, desc:'NOR cu 3 intrări'},
+  5: {label:'ȘI-NU-4',    gate:'AND', fanin:4, negGate:true,  useNOT:false, desc:'NAND cu 4 intrări'},
+  6: {label:'ȘI-NU-2',    gate:'AND', fanin:2, negGate:true,  useNOT:false, desc:'NAND cu 2 intrări'},
+  7: {label:'SAU-NU-4',   gate:'OR',  fanin:4, negGate:true,  useNOT:false, desc:'NOR cu 4 intrări'},
+  8: {label:'SAU-NU-2',   gate:'OR',  fanin:2, negGate:true,  useNOT:false, desc:'NOR cu 2 intrări'},
+  9: {label:'ȘI-4, NU',   gate:'AND', fanin:4, negGate:false, useNOT:true,  desc:'AND cu 4 intrări + NOT'},
+  10:{label:'SAU-3, NU',  gate:'OR',  fanin:3, negGate:false, useNOT:true,  desc:'OR cu 3 intrări + NOT'},
+};
+
+// MUX input values (simulated) — size depends on variant fanin
+let muxInputs = [1, 1]; // resized on applyVariant
+let addr = 0; // selected address
+let dataInput = 1; // I for DMUX
+let enableBar = 0; // Ē: 0 = enabled (active low), 1 = disabled
+let circuitMode = 'MUX';
+let V = VARIANTS[1];
+
+// Canvas state
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let sc=1, tx=0, ty=0, panning=false, px0=0, py0=0;
+
+// ══════════════════════════════════════════════════
+// SIZE HELPERS
+// ══════════════════════════════════════════════════
+// MUX is always 4:1 (4 data inputs I₀–I₃, 2 address bits A₁A₀)
+// DMUX is always 1:4 (4 outputs Y₀–Y₃, 2 address bits A₁A₀)
+// fanin = number of inputs of the LOGIC GATE used to implement the circuit
+function getMuxSize() { return 4; }
+function getAddrBits() { return 2; }
+function getA1() { return getAddrBits()===2 ? (addr>>1)&1 : 0; }
+function getA0() { return addr&1; }
+function getMuxOut() { return enableBar ? 0 : muxInputs[addr] ?? 0; }
+function getDmuxOut(i) { return (i===addr) ? dataInput : 0; }
+
+function toggleEnable() {
+  enableBar = 1 - enableBar;
+  const el = document.getElementById('enableVal');
+  el.textContent = enableBar ? 'Ē=1 (dezactivat)' : 'Ē=0 (activ)';
+  el.style.color = enableBar ? 'var(--accent2)' : 'var(--accent)';
+  renderAll();
+}
+
+function gateName(V) {
+  const base = V.gate === 'AND' ? 'ȘI' : 'SAU';
+  const neg = V.negGate ? '-NU' : '';
+  const not = V.useNOT ? '+NU' : '';
+  return base + neg + not;
+}
+
+function gateSymbol(V) {
+  if(V.negGate) return V.gate==='AND' ? 'NAND' : 'NOR';
+  return V.gate + (V.useNOT ? '+NOT':'');
+}
+
+// ══════════════════════════════════════════════════
+// STATE CONTROL
+// ══════════════════════════════════════════════════
+function setCircuit(mode) {
+  circuitMode = mode;
+  document.getElementById('btnMUX').className = mode==='MUX'?'act':'';
+  document.getElementById('btnDMUX').className = mode==='DMUX'?'act':'';
+  renderAll();
+}
+
+function buildAddrButtons() {
+  const n = getMuxSize();
+  const bits = getAddrBits();
+  const container = document.getElementById('addrBtns');
+  container.innerHTML = '';
+  for(let i=0; i<n; i++) {
+    const lbl = bits===1 ? i.toString() : i.toString(2).padStart(2,'0');
+    const btn = document.createElement('button');
+    btn.id = 'aBtn'+i;
+    btn.textContent = lbl;
+    btn.onclick = () => setAddr(i);
+    if(i===addr) btn.className='act';
+    container.appendChild(btn);
+  }
+  // Update addr label in ctrl-bar
+  const addrLbl = document.querySelector('.ctrl-bar .clbl');
+  addrLbl.textContent = bits===1 ? 'Adresă A₀:' : 'Adresă A₁A₀:';
+}
+
+function setAddr(a) {
+  addr = Math.min(a, getMuxSize()-1);
+  buildAddrButtons();
+  renderAll();
+}
+
+function toggleInput() {
+  dataInput = 1 - dataInput;
+  muxInputs = Array(getMuxSize()).fill(dataInput);
+  document.getElementById('inputVal').textContent = 'I='+dataInput;
+  renderAll();
+}
+
+function applyVariant() {
+  V = VARIANTS[+document.getElementById('varSel').value];
+  const n = getMuxSize();
+  muxInputs = Array(n).fill(dataInput);
+  if(addr >= n) addr = 0;
+  buildAddrButtons();
+  // Update MUX/DMUX button labels
+  document.getElementById('btnMUX').textContent = `MUX ${n}:1`;
+  document.getElementById('btnDMUX').textContent = `DMUX 1:${n}`;
+  renderAll();
+}
+
+// ══════════════════════════════════════════════════
+// RENDER ALL
+// ══════════════════════════════════════════════════
+function renderAll() {
+  updateSidebar();
+  renderTruth();
+  renderKarnaugh();
+  renderExpressions();
+  renderInfo();
+  drawSchema();
+}
+
+function updateSidebar() {
+  const bits = getAddrBits();
+  const n = getMuxSize();
+  const a1=getA1(), a0=getA0();
+  document.getElementById('addrDisp').textContent = bits===1 ? `A₀=${a0}` : `A₁A₀=${a1}${a0}`;
+  document.getElementById('addrBits').innerHTML =
+    (bits===1 ? [a0] : [a1,a0]).map(b=>`<div class="addr-bit ${b?'b1':'b0'}">${b}</div>`).join('');
+
+  // MUX input dots
+  document.getElementById('muxInputDots').innerHTML = muxInputs.map((v,i)=>
+    `<div class="io-line"><div class="io-dot ${addr===i?'active':'inactive'}"></div>
+     <span style="font-size:9px;font-family:'Share Tech Mono',monospace;color:${addr===i?'var(--accent3)':'var(--muted)'}">I${i}=${v}</span></div>`
+  ).join('');
+
+  // DMUX output dots
+  document.getElementById('dmuxOutputDots').innerHTML = Array.from({length:n},(_,i)=>{
+    const v = getDmuxOut(i);
+    return `<div class="io-line"><div class="io-dot ${v?'active':'inactive'}"></div>
+     <span style="font-size:9px;font-family:'Share Tech Mono',monospace;color:${v?'var(--accent3)':'var(--muted)'}">Y${i}=${v}</span></div>`;
+  }).join('');
+
+  const muxOut = getMuxOut();
+  document.getElementById('outputDisplay').textContent =
+    circuitMode === 'MUX' ? `Y = ${muxOut}${enableBar?' (Ē=1)':''}` : `Y${addr} = ${dataInput}`;
+
+  const iLbl = Array.from({length:n},(_,i)=>`I${i}`).join('=') + `=${dataInput}`;
+  document.getElementById('muxInputsLbl').textContent = iLbl;
+
+  // Active functions
+  let fn = '';
+  if(circuitMode==='MUX') {
+    fn = `<div style="color:var(--accent3)">Y = I${addr} = ${getMuxOut()}</div>`;
+    if(n===2) {
+      fn += `<div style="color:var(--muted);margin-top:4px">MUX 2:1: Y=Ā₀·I₀+A₀·I₁</div>`;
+    } else {
+      fn += `<div style="color:var(--muted);margin-top:4px">MUX 4:1: Y=Ā₁Ā₀·I₀+Ā₁A₀·I₁</div>`;
+      fn += `<div style="color:var(--muted)">+A₁Ā₀·I₂+A₁A₀·I₃</div>`;
+    }
+  } else {
+    fn = `<div style="color:var(--accent3)">I=${dataInput}, ${bits===1?`A₀=${a0}`:`A₁A₀=${a1}${a0}`}</div>`;
+    Array.from({length:n},(_,i)=>{
+      const v=getDmuxOut(i);
+      fn+=`<div style="color:${v?'var(--accent3)':'var(--muted)'}">Y${i}=${v}</div>`;
+    });
+  }
+  document.getElementById('activeFunctions').innerHTML = fn;
+}
+
+// ══════════════════════════════════════════════════
+// TRUTH TABLE
+// ══════════════════════════════════════════════════
+// ── compute intermediate signals for current variant ──
+function getIntermediates(A1, A0, I) {
+  const nA1=1-A1, nA0=1-A0;
+  const nand2=(a,b)=>1-(a&b);
+  const nand3=(a,b,c)=>1-(a&b&c);
+  const nand4=(a,b,c,d)=>1-(a&b&c&d);
+  const nor2=(a,b)=>1-(a|b);
+  const nor3=(a,b,c)=>1-(a|b|c);
+  const nor4=(a,b,c,d)=>1-(a|b|c|d);
+
+  // All variants use same address structure but different gate primitives
+  // Returns object with intermediate signal values + label arrays
+  const fn = V.fanin, neg = V.negGate, gate = V.gate;
+
+  // Address complements (always needed)
+  let Ai1, Ai0; // Ā₁, Ā₀
+  if(neg && fn===2) { Ai1=nand2(A1,A1); Ai0=nand2(A0,A0); }
+  else if(neg && fn===3) { Ai1=nand3(A1,A1,A1); Ai0=nand3(A0,A0,A0); }
+  else if(neg && fn===4 && gate==='AND') { Ai1=nand4(A1,A1,A1,A1); Ai0=nand4(A0,A0,A0,A0); }
+  else if(neg && fn===4 && gate==='OR')  { Ai1=nor4(A1,A1,A1,A1); Ai0=nor4(A0,A0,A0,A0); }
+  else if(neg && fn===3 && gate==='OR')  { Ai1=nor3(A1,A1,A1); Ai0=nor3(A0,A0,A0); }
+  else if(neg && fn===2 && gate==='OR')  { Ai1=nor2(A1,A1); Ai0=nor2(A0,A0); }
+  else { Ai1=1-A1; Ai0=1-A0; } // NOT gate
+
+  // Product terms: Ā₁Ā₀, Ā₁A₀, A₁Ā₀, A₁A₀ (address decode)
+  // Then AND with I for each product
+  // Result depends on gate type and fanin:
+
+  let rows = []; // [{label, val}] for MUX
+  let dmuxRows = []; // DMUX Ybar and Y
+
+  if(gate==='AND' && !neg) {
+    // AND + NOT: direct positive logic
+    if(fn===2) {
+      // T = AND2(addr_bit, addr_bit), P = AND2(T, I)
+      const T0=A1&A1, T1=Ai1&Ai0, T2=Ai1&A0, T3=A1&Ai0, T4=A1&A0;
+      const P0=T1&I, P1=T2&I, P2=T3&I, P3=T4&I;
+      const Y=P0|P1|P2|P3;
+      rows=[
+        {l:'Ā₁',v:Ai1,c:'acc'},{l:'Ā₀',v:Ai0,c:'acc'},
+        {l:'T₁=Ā₁·Ā₀',v:T1,c:'a2'},{l:'T₂=Ā₁·A₀',v:T2,c:'a2'},{l:'T₃=A₁·Ā₀',v:T3,c:'a2'},{l:'T₄=A₁·A₀',v:T4,c:'a2'},
+        {l:'P₀=T₁·I',v:P0,c:'a3'},{l:'P₁=T₂·I',v:P1,c:'a3'},{l:'P₂=T₃·I',v:P2,c:'a3'},{l:'P₃=T₄·I',v:P3,c:'a3'},
+        {l:'Y=P₀+P₁+P₂+P₃',v:Y,c:'y'}
+      ];
+      // DMUX: AND2(AND2(addr),I)
+      const dY0=Ai1&Ai0&I, dY1=Ai1&A0&I, dY2=A1&Ai0&I, dY3=A1&A0&I;
+      dmuxRows=[{l:'T=Ā₁·Ā₀',v:Ai1&Ai0},{l:'T=Ā₁·A₀',v:Ai1&A0},{l:'T=A₁·Ā₀',v:A1&Ai0},{l:'T=A₁·A₀',v:A1&A0},
+                {l:'Y₀=T·I',v:dY0},{l:'Y₁=T·I',v:dY1},{l:'Y₂=T·I',v:dY2},{l:'Y₃=T·I',v:dY3}];
+    } else if(fn===4) {
+      // AND4 with repeated pin: P0=AND4(Ā₁,Ā₀,I,I)
+      const P0=Ai1&Ai0&I, P1=Ai1&A0&I, P2=A1&Ai0&I, P3=A1&A0&I;
+      const Y=P0|P1|P2|P3;
+      rows=[
+        {l:'Ā₁',v:Ai1,c:'acc'},{l:'Ā₀',v:Ai0,c:'acc'},
+        {l:'P₀=AND4(Ā₁,Ā₀,I,I)',v:P0,c:'a3'},{l:'P₁=AND4(Ā₁,A₀,I,I)',v:P1,c:'a3'},
+        {l:'P₂=AND4(A₁,Ā₀,I,I)',v:P2,c:'a3'},{l:'P₃=AND4(A₁,A₀,I,I)',v:P3,c:'a3'},
+        {l:'Y=OR(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀=AND4(I,Ā₁,Ā₀,I)',v:Ai1&Ai0&I},{l:'Y₁=AND4(I,Ā₁,A₀,I)',v:Ai1&A0&I},
+                {l:'Y₂=AND4(I,A₁,Ā₀,I)',v:A1&Ai0&I},{l:'Y₃=AND4(I,A₁,A₀,I)',v:A1&A0&I}];
+    }
+  } else if(gate==='OR' && !neg) {
+    // OR + NOT: AND(a,b,c) = NOT(OR(NOT(a),NOT(b),NOT(c))) = NOT(OR2(OR2(nA,nB),nC))
+    if(fn===2) {
+      const nI=1-I;
+      // P0=Ā₁·Ā₀·I = NOT(OR2(OR2(A1,A0),nI))
+      const R0=A1|A0,   P0=1-(R0|nI);  // Ā₁·Ā₀·I
+      const R1=A1|Ai0,  P1=1-(R1|nI);  // Ā₁·A₀·I  — wait: Ā₁·A₀·I = NOT(OR(A1,nA0,nI)) = NOT(OR(A1,Ai0,nI))
+      // Actually: Ā₁·A₀·I: complements of inputs are A1→nA1=Ai1, Ā₀→A0, Ī→I
+      // NOT(OR(nĀ₁, nA₀, nI)) = NOT(OR(A1, nA0, nI)) = NOT(OR(A1,Ai0,nI)) ✓
+      // P0=Ā₁·Ā₀·I → NOT(OR(A1,A0,nI)) ✓
+      // P1=Ā₁·A₀·I → NOT(OR(A1,Ai0,nI)) ✓  (Ai0=NOT(A0), so NOT(A₀_bar)=A0 when negated again)
+      // Wait - to get NOT(Ā₁·A₀·I) we apply De Morgan: OR(NOT(Ā₁),NOT(A₀),NOT(I)) = OR(A1,nA0,nI) = OR(A1,Ai0,nI)
+      // So P1 = NOT(OR2(OR2(A1,Ai0),nI)) - already computed as R1=A1|Ai0, P1=1-(R1|nI) ✓
+      const R2=Ai1|A0,  P2=1-(R2|nI);  // A₁·Ā₀·I → NOT(OR(Ai1,A0,nI))
+      const R3=Ai1|Ai0, P3=1-(R3|nI);  // A₁·A₀·I → NOT(OR(Ai1,Ai0,nI))
+      const Y=P0|P1|P2|P3;
+      rows=[
+        {l:'Ā₁',v:Ai1,c:'acc'},{l:'Ā₀',v:Ai0,c:'acc'},{l:'Ī',v:nI,c:'acc'},
+        {l:'OR₂(A₁,A₀)',v:R0,c:'a2'},{l:'OR₂(A₁,Ā₀)',v:R1,c:'a2'},{l:'OR₂(Ā₁,A₀)',v:R2,c:'a2'},{l:'OR₂(Ā₁,Ā₀)',v:R3,c:'a2'},
+        {l:'P₀=NOT(OR₂(R₀,Ī))',v:P0,c:'a3'},{l:'P₁=NOT(OR₂(R₁,Ī))',v:P1,c:'a3'},{l:'P₂=NOT(OR₂(R₂,Ī))',v:P2,c:'a3'},{l:'P₃=NOT(OR₂(R₃,Ī))',v:P3,c:'a3'},
+        {l:'Y=OR(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀=NOT(OR₂(OR₂(A₁,A₀),Ī))',v:P0},{l:'Y₁=NOT(OR₂(OR₂(A₁,Ā₀),Ī))',v:P1},
+                {l:'Y₂=NOT(OR₂(OR₂(Ā₁,A₀),Ī))',v:P2},{l:'Y₃=NOT(OR₂(OR₂(Ā₁,Ā₀),Ī))',v:P3}];
+    } else if(fn===3) {
+      // AND3(a,b,c) = NOR3(NOT(a),NOT(b),NOT(c)) — direct 3-input NOR approach using NOT=OR3(x,x,x) but here gate=OR not NOR
+      // With OR3+NOT: AND(a,b,c) = NOT(OR3(NOT(a),NOT(b),NOT(c)))
+      const nI=1-I;
+      const p0=1-(A1|A0|nI);   // Ā₁·Ā₀·I = NOT(OR3(A1,A0,nI))
+      const p1=1-(A1|Ai0|nI);  // Ā₁·A₀·I = NOT(OR3(A1,Ai0,nI))
+      const p2=1-(Ai1|A0|nI);  // A₁·Ā₀·I = NOT(OR3(Ai1,A0,nI))
+      const p3=1-(Ai1|Ai0|nI); // A₁·A₀·I = NOT(OR3(Ai1,Ai0,nI))
+      const Y=p0|p1|p2|p3;
+      rows=[
+        {l:'Ā₁',v:Ai1,c:'acc'},{l:'Ā₀',v:Ai0,c:'acc'},{l:'Ī',v:nI,c:'acc'},
+        {l:'P₀=NOT(OR₃(A₁,A₀,Ī))',v:p0,c:'a3'},{l:'P₁=NOT(OR₃(A₁,Ā₀,Ī))',v:p1,c:'a3'},
+        {l:'P₂=NOT(OR₃(Ā₁,A₀,Ī))',v:p2,c:'a3'},{l:'P₃=NOT(OR₃(Ā₁,Ā₀,Ī))',v:p3,c:'a3'},
+        {l:'Y=OR₃(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀=NOT(OR₃(A₁,A₀,Ī))',v:p0},{l:'Y₁=NOT(OR₃(A₁,Ā₀,Ī))',v:p1},
+                {l:'Y₂=NOT(OR₃(Ā₁,A₀,Ī))',v:p2},{l:'Y₃=NOT(OR₃(Ā₁,Ā₀,Ī))',v:p3}];
+    }
+  } else if(gate==='AND' && neg) {
+    // NAND-based
+    const nand_fn = fn===2 ? nand2 : fn===3 ? nand3 : (a,b,c,d)=>nand4(a,b,c,d??a);
+    if(fn===2) {
+      // NOT=NAND2(a,a); AND3 via 2 NAND2 stages
+      // Stage1: NAND2(Ā₁,Ā₀), then NAND2(result,I) → but NAND(NAND(x))=x, so:
+      // NAND2(NAND2(Ā₁,Ā₀),I) = AND2(addr,I) not AND3
+      // Correct AND3 from NAND2: AND(a,b,c) = NAND2(NAND2(a,b), NAND2(c,c))... no
+      // AND(a,b,c) from NAND2: = NOT(NAND(a,b,c)) — not possible with NAND2
+      // With NAND2+NOT: AND(a,b,c) = AND2(AND2(a,b),c) = NAND(NAND(NAND(a,b),NAND(a,b)),c)
+      // Practical: T=NAND2(a,b); notT=NAND2(T,T); P=NAND2(NAND2(notT,c),NAND2(notT,c))
+      const T1=nand2(Ai1,Ai0), nT1=nand2(T1,T1); const P0=nand2(nand2(nT1,I),nand2(nT1,I));
+      const T2=nand2(Ai1,A0),  nT2=nand2(T2,T2); const P1=nand2(nand2(nT2,I),nand2(nT2,I));
+      const T3=nand2(A1,Ai0),  nT3=nand2(T3,T3); const P2=nand2(nand2(nT3,I),nand2(nT3,I));
+      const T4=nand2(A1,A0),   nT4=nand2(T4,T4); const P3=nand2(nand2(nT4,I),nand2(nT4,I));
+      // OR4 from NAND2: OR(a,b,c,d) = NAND2(NAND2(a,a),NAND2(b,b)) for pairs then combine
+      const Y01=nand2(nand2(P0,P0),nand2(P1,P1));
+      const Y23=nand2(nand2(P2,P2),nand2(P3,P3));
+      const Y=nand2(nand2(Y01,Y01),nand2(Y23,Y23));
+      rows=[
+        {l:'Ā₁=NAND(A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NAND(A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'T₁=NAND(Ā₁,Ā₀)',v:T1,c:'a2'},{l:'T₂=NAND(Ā₁,A₀)',v:T2,c:'a2'},{l:'T₃=NAND(A₁,Ā₀)',v:T3,c:'a2'},{l:'T₄=NAND(A₁,A₀)',v:T4,c:'a2'},
+        {l:'P₀=AND(T̄₁,I)',v:P0,c:'a3'},{l:'P₁=AND(T̄₂,I)',v:P1,c:'a3'},{l:'P₂=AND(T̄₃,I)',v:P2,c:'a3'},{l:'P₃=AND(T̄₄,I)',v:P3,c:'a3'},
+        {l:'Y=OR(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      const dY0=Ai1&Ai0&I,dY1=Ai1&A0&I,dY2=A1&Ai0&I,dY3=A1&A0&I;
+      dmuxRows=[{l:'Y₀',v:dY0},{l:'Y₁',v:dY1},{l:'Y₂',v:dY2},{l:'Y₃',v:dY3}];
+    } else if(fn===3) {
+      // NAND3: P̄i=NAND3(addr,addr,I), Pi=NAND3(P̄i,P̄i,P̄i), Y=NAND3(P̄0,P̄1,P̄2) + P̄3
+      const Pb0=nand3(Ai1,Ai0,I), Pb1=nand3(Ai1,A0,I), Pb2=nand3(A1,Ai0,I), Pb3=nand3(A1,A0,I);
+      // Y = OR(P0..P3) = OR3(P0,P1,P2) then OR with P3
+      // OR3(P0,P1,P2) = NAND3(Pb0,Pb1,Pb2)
+      const mid=nand3(Pb0,Pb1,Pb2); // = P0|P1|P2
+      // OR(mid,P3): OR2 = NAND3(NOT(mid),NOT(P3),NOT(P3)) = NAND3(1-mid,Pb3,Pb3)
+      const Y=nand3(1-mid,Pb3,Pb3);
+      const checkY=(Ai1&Ai0&I)|(Ai1&A0&I)|(A1&Ai0&I)|(A1&A0&I);
+      rows=[
+        {l:'Ā₁=NAND(A₁,A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NAND(A₀,A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'P̄₀=NAND(Ā₁,Ā₀,I)',v:Pb0,c:'a2'},{l:'P̄₁=NAND(Ā₁,A₀,I)',v:Pb1,c:'a2'},{l:'P̄₂=NAND(A₁,Ā₀,I)',v:Pb2,c:'a2'},{l:'P̄₃=NAND(A₁,A₀,I)',v:Pb3,c:'a2'},
+        {l:'OR(P₀,P₁,P₂)=NAND(P̄₀,P̄₁,P̄₂)',v:mid,c:'a3'},
+        {l:'Y=NAND(NOT(mid),P̄₃,P̄₃)',v:Y,c:'y'}
+      ];
+      const dPb0=nand3(I,Ai1,Ai0),dPb1=nand3(I,Ai1,A0),dPb2=nand3(I,A1,Ai0),dPb3=nand3(I,A1,A0);
+      dmuxRows=[{l:'Ȳ₀=NAND(I,Ā₁,Ā₀)',v:dPb0},{l:'Ȳ₁=NAND(I,Ā₁,A₀)',v:dPb1},
+                {l:'Ȳ₂=NAND(I,A₁,Ā₀)',v:dPb2},{l:'Ȳ₃=NAND(I,A₁,A₀)',v:dPb3},
+                {l:'Y₀=NAND(Ȳ₀,Ȳ₀,Ȳ₀)',v:nand3(dPb0,dPb0,dPb0)},{l:'Y₁=NAND(Ȳ₁,Ȳ₁,Ȳ₁)',v:nand3(dPb1,dPb1,dPb1)},
+                {l:'Y₂=NAND(Ȳ₂,Ȳ₂,Ȳ₂)',v:nand3(dPb2,dPb2,dPb2)},{l:'Y₃=NAND(Ȳ₃,Ȳ₃,Ȳ₃)',v:nand3(dPb3,dPb3,dPb3)}];
+    } else if(fn===4) {
+      // NAND4: P̄i=NAND4(addr1,addr0,I,I), Y=NAND4(P̄0,P̄1,P̄2,P̄3)
+      const Pb0=nand4(Ai1,Ai0,I,I), Pb1=nand4(Ai1,A0,I,I), Pb2=nand4(A1,Ai0,I,I), Pb3=nand4(A1,A0,I,I);
+      const Y=nand4(Pb0,Pb1,Pb2,Pb3);
+      rows=[
+        {l:'Ā₁=NAND(A₁,A₁,A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NAND(A₀,A₀,A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'P̄₀=NAND4(Ā₁,Ā₀,I,I)',v:Pb0,c:'a2'},{l:'P̄₁=NAND4(Ā₁,A₀,I,I)',v:Pb1,c:'a2'},
+        {l:'P̄₂=NAND4(A₁,Ā₀,I,I)',v:Pb2,c:'a2'},{l:'P̄₃=NAND4(A₁,A₀,I,I)',v:Pb3,c:'a2'},
+        {l:'Y=NAND4(P̄₀,P̄₁,P̄₂,P̄₃)',v:Y,c:'y'}
+      ];
+      // DMUX for NAND4: Ȳk=NAND4(I,addr,addr,I), Yk=NAND4(Ȳk,Ȳk,Ȳk,Ȳk)=NOT(Ȳk)
+      const dy0=nand4(I,Ai1,Ai0,I), dy1=nand4(I,Ai1,A0,I), dy2=nand4(I,A1,Ai0,I), dy3=nand4(I,A1,A0,I);
+      dmuxRows=[{l:'Ȳ₀=NAND4(I,Ā₁,Ā₀,I)',v:dy0},{l:'Ȳ₁=NAND4(I,Ā₁,A₀,I)',v:dy1},
+                {l:'Ȳ₂=NAND4(I,A₁,Ā₀,I)',v:dy2},{l:'Ȳ₃=NAND4(I,A₁,A₀,I)',v:dy3},
+                {l:'Y₀=NAND4(Ȳ₀×4)',v:nand4(dy0,dy0,dy0,dy0)},{l:'Y₁=NAND4(Ȳ₁×4)',v:nand4(dy1,dy1,dy1,dy1)},
+                {l:'Y₂=NAND4(Ȳ₂×4)',v:nand4(dy2,dy2,dy2,dy2)},{l:'Y₃=NAND4(Ȳ₃×4)',v:nand4(dy3,dy3,dy3,dy3)}];
+    }
+  } else if(gate==='OR' && neg) {
+    // NOR-based
+    if(fn===2) {
+      // AND(a,b,c) = NOR(NOR(a,a),NOR(b,b),NOR(c,c))? No, NOR2 only
+      // AND(a,b) = NOR2(NOR2(a,a),NOR2(b,b)) = NOT(NOT(a)|NOT(b)) = a&b ✓
+      // AND3(a,b,c) = AND2(AND2(a,b),c) = NOR(NOR(NOR(NOR(a,a),NOR(b,b)),NOR(NOR(a,a),NOR(b,b))),NOR(c,c))
+      const nA1b=nor2(A1,A1), nA0b=nor2(A0,A0), nAi1b=nor2(Ai1,Ai1), nAi0b=nor2(Ai0,Ai0), nIb=nor2(I,I), nI=1-I;
+      // P0=Ā₁&Ā₀&I: AND2(Ai1,Ai0) then AND2(result,I)
+      const and2=(a,b)=>nor2(nor2(a,a),nor2(b,b));
+      const T0=and2(Ai1,Ai0), P0=and2(T0,I);
+      const T1=and2(Ai1,A0),  P1=and2(T1,I);
+      const T2=and2(A1,Ai0),  P2=and2(T2,I);
+      const T3=and2(A1,A0),   P3=and2(T3,I);
+      // OR4 from NOR2: OR(a,b)=NOR(NOR(a,b))
+      const Y01=nor2(nor2(P0,P1),nor2(P0,P1)); // ≠ OR2
+      // OR2(a,b) = NOR(NOR(a,b),NOR(a,b)) = NOT(NOR(a,b)) = a|b ✓
+      const or2=(a,b)=>1-nor2(a,b);
+      const Y=or2(or2(P0,P1),or2(P2,P3));
+      rows=[
+        {l:'Ā₁=NOR(A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NOR(A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'T₀=AND₂(Ā₁,Ā₀)',v:T0,c:'a2'},{l:'T₁=AND₂(Ā₁,A₀)',v:T1,c:'a2'},{l:'T₂=AND₂(A₁,Ā₀)',v:T2,c:'a2'},{l:'T₃=AND₂(A₁,A₀)',v:T3,c:'a2'},
+        {l:'P₀=AND₂(T₀,I)',v:P0,c:'a3'},{l:'P₁=AND₂(T₁,I)',v:P1,c:'a3'},{l:'P₂=AND₂(T₂,I)',v:P2,c:'a3'},{l:'P₃=AND₂(T₃,I)',v:P3,c:'a3'},
+        {l:'Y=OR(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀',v:P0},{l:'Y₁',v:P1},{l:'Y₂',v:P2},{l:'Y₃',v:P3}];
+    } else if(fn===3) {
+      // NOR3: AND(a,b,c) = NOR3(NOR(a,a,a),NOR(b,b,b),NOR(c,c,c))
+      const not3=(x)=>nor3(x,x,x);
+      const and3nor=(a,b,c)=>nor3(not3(a),not3(b),not3(c));
+      const P0=and3nor(Ai1,Ai0,I), P1=and3nor(Ai1,A0,I), P2=and3nor(A1,Ai0,I), P3=and3nor(A1,A0,I);
+      // OR4: NOR3(NOR3(P0,P1,P2), NOT(P3), NOT(P3)) -- tricky
+      // OR3(P0,P1,P2) = NOR3(Pb0,Pb1,Pb2) where Pbi=NOT(Pi)
+      const or3=(a,b,c)=>nor3(not3(a),not3(b),not3(c));
+      const Y=or3(P0,P1,P2)|P3; // simplified; proper implementation cascades
+      const realY=(Ai1&Ai0&I)|(Ai1&A0&I)|(A1&Ai0&I)|(A1&A0&I);
+      rows=[
+        {l:'Ā₁=NOR(A₁,A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NOR(A₀,A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'P₀=AND₃NOR(Ā₁,Ā₀,I)',v:P0,c:'a3'},{l:'P₁=AND₃NOR(Ā₁,A₀,I)',v:P1,c:'a3'},
+        {l:'P₂=AND₃NOR(A₁,Ā₀,I)',v:P2,c:'a3'},{l:'P₃=AND₃NOR(A₁,A₀,I)',v:P3,c:'a3'},
+        {l:'Y=OR₃(P₀,P₁,P₂,P₃)',v:realY,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀=AND(I,Ā₁,Ā₀)',v:P0},{l:'Y₁=AND(I,Ā₁,A₀)',v:P1},
+                {l:'Y₂=AND(I,A₁,Ā₀)',v:P2},{l:'Y₃=AND(I,A₁,A₀)',v:P3}];
+    } else if(fn===4) {
+      // NOR4: AND(a,b,c,d)=NOR4(NOT(a),NOT(b),NOT(c),NOT(d))
+      const not4=(x)=>nor4(x,x,x,x);
+      const P0=nor4(not4(Ai1),not4(Ai0),not4(I),not4(I));
+      const P1=nor4(not4(Ai1),not4(A0), not4(I),not4(I));
+      const P2=nor4(not4(A1), not4(Ai0),not4(I),not4(I));
+      const P3=nor4(not4(A1), not4(A0), not4(I),not4(I));
+      const Y=P0|P1|P2|P3;
+      rows=[
+        {l:'Ā₁=NOR4(A₁,A₁,A₁,A₁)',v:Ai1,c:'acc'},{l:'Ā₀=NOR4(A₀,A₀,A₀,A₀)',v:Ai0,c:'acc'},
+        {l:'P₀=NOR4(Ā̄₁,Ā̄₀,Ī,Ī)',v:P0,c:'a3'},{l:'P₁=NOR4(Ā̄₁,A̅₀,Ī,Ī)',v:P1,c:'a3'},
+        {l:'P₂=NOR4(A̅₁,Ā̄₀,Ī,Ī)',v:P2,c:'a3'},{l:'P₃=NOR4(A̅₁,A̅₀,Ī,Ī)',v:P3,c:'a3'},
+        {l:'Y=OR(P₀,P₁,P₂,P₃)',v:Y,c:'y'}
+      ];
+      dmuxRows=[{l:'Y₀=NOR4(Ī,A₁,A₀,Ī)',v:P0},{l:'Y₁=NOR4(Ī,A₁,Ā₀,Ī)',v:P1},
+                {l:'Y₂=NOR4(Ī,Ā₁,A₀,Ī)',v:P2},{l:'Y₃=NOR4(Ī,Ā₁,Ā₀,Ī)',v:P3}];
+    }
+  }
+
+  return {rows, dmuxRows, Ai1, Ai0};
+}
+
+function renderTruth() {
+  const n = getMuxSize(); // 2 or 4
+  const bits = getAddrBits(); // 1 or 2
+  let h = '<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">';
+
+  // ── MUX truth table ──
+  // Columns: Ē | [A₁] | A₀ | I₀..Iₙ | Y
+  // Rows: 1 row Ē=1 (all x, Y=0) + n rows Ē=0 (one per address)
+  h += `<div>
+  <div class="sec-title" style="font-size:10px;color:var(--accent);margin-bottom:8px">
+    TABEL ADEVĂR MUX ${n}:1 — ${V.desc}
+  </div>
+  <table class="truth-table"><thead><tr>
+    <th style="color:var(--accent2)">Ē</th>
+    ${bits===2?'<th>A₁</th>':''}
+    <th>A₀</th>
+    ${Array.from({length:n},(_,k)=>`<th style="color:var(--accent3)">I${k}</th>`).join('')}
+    <th style="color:#fff;border-left:2px solid var(--accent)">Y</th>
+  </tr></thead><tbody>`;
+
+  // Row Ē=1
+  const curDisabled = enableBar===1;
+  h += `<tr class="${curDisabled?'cur':''}">
+    <td style="color:var(--accent2)">1</td>
+    ${bits===2?'<td class="vx">x</td>':''}
+    <td class="vx">x</td>
+    ${Array.from({length:n},()=>'<td class="vx">x</td>').join('')}
+    <td style="font-weight:bold;border-left:2px solid var(--accent);color:var(--muted)">0</td>
+  </tr>`;
+
+  // Rows Ē=0, one per address
+  for(let idx=0; idx<n; idx++) {
+    const A1 = bits===2 ? (idx>>1)&1 : 0;
+    const A0 = idx&1;
+    const curRow = enableBar===0 && idx===addr;
+    const iCols = Array.from({length:n},(_,k) =>
+      k===idx
+        ? `<td style="color:var(--accent3)">I${k}</td>`
+        : `<td class="vx">x</td>`
+    ).join('');
+    h += `<tr class="${curRow?'cur':''}">
+      <td class="v0">0</td>
+      ${bits===2?`<td class="v${A1}">${A1}</td>`:''}
+      <td class="v${A0}">${A0}</td>
+      ${iCols}
+      <td style="font-weight:bold;border-left:2px solid var(--accent);color:var(--accent3)">I${idx}</td>
+    </tr>`;
+  }
+  h += '</tbody></table></div>';
+
+  // ── DMUX truth table ──
+  // n rows (one per address), I = 0/1, Yk = 0/1 if selected else 0
+  h += `<div>
+  <div class="sec-title" style="font-size:10px;color:var(--accent4);margin-bottom:8px">
+    TABEL ADEVĂR DMUX 1:${n} — ${V.desc}
+  </div>
+  <table class="truth-table"><thead><tr>
+    ${bits===2?'<th>A₁</th>':''}
+    <th>A₀</th>
+    <th style="color:var(--accent3)">I</th>
+    ${Array.from({length:n},(_,k)=>`<th style="color:var(--accent4)">Y${k}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  for(let idx=0; idx<n; idx++) {
+    const A1 = bits===2 ? (idx>>1)&1 : 0;
+    const A0 = idx&1;
+    const curRow = idx===addr;
+    h += `<tr class="${curRow?'cur':''}">
+      ${bits===2?`<td class="v${A1}">${A1}</td>`:''}
+      <td class="v${A0}">${A0}</td>
+      <td style="color:var(--accent3)">0/1</td>
+      ${Array.from({length:n},(_,k)=>{
+        const isActive = k===idx;
+        return `<td style="color:${isActive?'var(--accent4)':'var(--muted)'};font-weight:${isActive?'bold':'normal'}">${isActive?'0/1':'0'}</td>`;
+      }).join('')}
+    </tr>`;
+  }
+  h += '</tbody></table></div>';
+
+  h += '</div>';
+  document.getElementById('truthContainer').innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════
+// KARNAUGH
+// ══════════════════════════════════════════════════
+function renderKarnaugh() {
+  const n = getMuxSize();       // 2 or 4
+  const bits = getAddrBits();   // 1 or 2
+
+  let h = `<div style="margin-bottom:10px">
+    <span class="variant-badge">VARIANTA ${document.getElementById('varSel').value} · ${V.label}</span>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px;font-family:'Share Tech Mono',monospace">
+      ${n===2
+        ? 'Hărți Karnaugh — MUX 2:1: Y(A₀,Iₖ) · DMUX 1:2: Yₖ(A₀,I)'
+        : 'Hărți Karnaugh — MUX 4:1: Y(A₁,A₀,Iₖ) · DMUX 1:4: Yₖ(A₁,A₀,I)'}
+    </p>
+  </div><div class="kmap-grid">`;
+
+  if(n === 2) {
+    // ── MUX 2:1 — 2 maps (one per channel), vars: A₀ × Iₖ ──
+    // Also one 3-var map with Ē: rows=ĒA₀ (Gray 00,01,11,10), cols=I
+    for(let ki=0; ki<2; ki++) {
+      const kA0 = ki; // channel 0 → A0=0, channel 1 → A0=1
+      const curChan = ki===addr && enableBar===0;
+      h += `<div class="kmap-wrap" style="${curChan?'border-color:var(--accent3)':''}">
+        <div class="kmap-title" style="color:${curChan?'var(--accent3)':'var(--accent)'}">MUX canal I${ki} — Y(A₀,I${ki})</div>
+        <table class="kmap"><tr><th style="font-size:8px">A₀╲I${ki}</th><th>0</th><th>1</th></tr>`;
+      [0,1].forEach(A0 => {
+        h += `<tr><th>${A0}</th>`;
+        [0,1].forEach(Ik => {
+          const yval = (A0===kA0) ? Ik : 0;
+          const active = enableBar===0 && A0===getA0() && Ik===dataInput && ki===addr;
+          h += `<td class="${yval?'k1':'k0'}" style="${active?'border:2px solid var(--accent3)':''}">${yval}</td>`;
+        });
+        h += '</tr>';
+      });
+      h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y=I${ki} când A₀=${kA0}</div></div>`;
+    }
+    // Ē map (3-var: Ē×A₀ rows Gray, I col)
+    const gray2 = [[0,0],[0,1],[1,1],[1,0]];
+    h += `<div class="kmap-wrap">
+      <div class="kmap-title" style="color:var(--accent2)">MUX — Y(Ē,A₀,I) [3 var.]</div>
+      <table class="kmap"><tr><th style="font-size:8px">ĒA₀╲I</th><th>0</th><th>1</th></tr>`;
+    gray2.forEach(([E,A0]) => {
+      h += `<tr><th>${E}${A0}</th>`;
+      [0,1].forEach(I => {
+        const yval = E===1 ? 0 : I;
+        const active = E===enableBar && A0===getA0() && I===dataInput;
+        h += `<td class="${yval?'k1':'k0'}" style="${active?'border:2px solid var(--accent3)':''}">${yval}</td>`;
+      });
+      h += '</tr>';
+    });
+    h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y=Ē̄·I</div></div>`;
+
+    // DMUX 1:2 maps — Y0(A0,I) and Y1(A0,I)
+    for(let yi=0; yi<2; yi++) {
+      const yA0 = yi;
+      const curOut = yi===addr;
+      h += `<div class="kmap-wrap" style="${curOut?'border-color:var(--accent4)':''}">
+        <div class="kmap-title" style="color:${curOut?'var(--accent4)':'#6b46c1'}">Y${yi}(A₀,I)</div>
+        <table class="kmap"><tr><th style="font-size:8px">A₀╲I</th><th>0</th><th>1</th></tr>`;
+      [0,1].forEach(A0 => {
+        h += `<tr><th>${A0}</th>`;
+        [0,1].forEach(I => {
+          const v = (A0===yA0) ? I : 0;
+          const active = A0===getA0() && I===dataInput;
+          h += `<td class="${v?'k1':'k0'}" style="${active?'border:2px solid var(--accent4)':''}">${v}</td>`;
+        });
+        h += '</tr>';
+      });
+      h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y${yi}=I·${yi===0?'Ā₀':'A₀'}</div></div>`;
+    }
+
+  } else {
+    // ── MUX 4:1 — 4 maps (one per channel), vars: A₁A₀ rows (Gray) × Iₖ cols ──
+    const gray2 = [[0,0],[0,1],[1,1],[1,0]];
+    const addrOf = [  [0,0],[0,1],[1,0],[1,1] ]; // channel k → [A1,A0]
+
+    for(let ki=0; ki<4; ki++) {
+      const [kA1,kA0] = addrOf[ki];
+      const curChan = ki===addr && enableBar===0;
+      h += `<div class="kmap-wrap" style="${curChan?'border-color:var(--accent3)':''}">
+        <div class="kmap-title" style="color:${curChan?'var(--accent3)':'var(--accent)'}">MUX canal I${ki} — Y(A₁A₀,I${ki})</div>
+        <table class="kmap"><tr><th style="font-size:8px">A₁A₀╲I${ki}</th><th>0</th><th>1</th></tr>`;
+      gray2.forEach(([A1,A0]) => {
+        h += `<tr><th>${A1}${A0}</th>`;
+        [0,1].forEach(Ik => {
+          const yval = (A1===kA1 && A0===kA0) ? Ik : 0;
+          const active = enableBar===0 && A1===getA1() && A0===getA0() && Ik===dataInput && ki===addr;
+          h += `<td class="${yval?'k1':'k0'}" style="${active?'border:2px solid var(--accent3)':''}">${yval}</td>`;
+        });
+        h += '</tr>';
+      });
+      h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y=I${ki} când A₁A₀=${kA1}${kA0}</div></div>`;
+    }
+
+    // 4-var Ē map: rows=ĒA₁ Gray, cols=A₀I Gray
+    h += `<div class="kmap-wrap">
+      <div class="kmap-title" style="color:var(--accent2)">MUX — Y(Ē,A₁,A₀,I) [4 var.]</div>
+      <table class="kmap"><tr><th style="font-size:8px">ĒA₁╲A₀I</th><th>00</th><th>01</th><th>11</th><th>10</th></tr>`;
+    gray2.forEach(([E,A1]) => {
+      h += `<tr><th>${E}${A1}</th>`;
+      gray2.forEach(([A0,I]) => {
+        const yval = E===1 ? 0 : I;
+        const active = E===enableBar && A1===getA1() && A0===getA0() && I===dataInput;
+        h += `<td class="${yval?'k1':'k0'}" style="${active?'border:2px solid var(--accent3)':''}">${yval}</td>`;
+      });
+      h += '</tr>';
+    });
+    h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y=Ē̄·I (0 când Ē=1)</div></div>`;
+
+    // DMUX 1:4 maps — Y0–Y3(A1,A0,I)
+    for(let yi=0; yi<4; yi++) {
+      const [yA1,yA0] = addrOf[yi];
+      const curOut = yi===addr;
+      const selBits = ['Ā₁·Ā₀','Ā₁·A₀','A₁·Ā₀','A₁·A₀'][yi];
+      h += `<div class="kmap-wrap" style="${curOut?'border-color:var(--accent4)':''}">
+        <div class="kmap-title" style="color:${curOut?'var(--accent4)':'#6b46c1'}">Y${yi}(A₁,A₀,I)</div>
+        <table class="kmap"><tr><th style="font-size:8px">A₁A₀╲I</th><th>0</th><th>1</th></tr>`;
+      gray2.forEach(([A1,A0]) => {
+        h += `<tr><th>${A1}${A0}</th>`;
+        [0,1].forEach(I => {
+          const v = (A1===yA1 && A0===yA0) ? I : 0;
+          const active = A1===getA1() && A0===getA0() && I===dataInput;
+          h += `<td class="${v?'k1':'k0'}" style="${active?'border:2px solid var(--accent4)':''}">${v}</td>`;
+        });
+        h += '</tr>';
+      });
+      h += `</table><div style="font-size:8px;color:var(--muted);margin-top:4px;font-family:'Share Tech Mono',monospace">Y${yi}=I·${selBits}</div></div>`;
+    }
+  }
+
+  h += '</div>';
+  document.getElementById('karnaughContainer').innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════
+// EXPRESSIONS
+// ══════════════════════════════════════════════════
+function renderExpressions() {
+  const vn = document.getElementById('varSel').value;
+  const {gate, fanin:fn, negGate:neg, desc} = V;
+
+  function fmt(s) {
+    return s
+      .replace(/Ā₁/g,'<span class="neg">A₁</span>')
+      .replace(/Ā₀/g,'<span class="neg">A₀</span>')
+      .replace(/Ī/g,'<span class="neg">I</span>')
+      .replace(/A₁/g,'<span class="var">A₁</span>')
+      .replace(/A₀/g,'<span class="var">A₀</span>')
+      .replace(/I(\d)/g,'<span class="var">I$1</span>')
+      .replace(/(?<![A-Z])I(?!\d)/g,'<span class="var">I</span>')
+      .replace(/·/g,'<span class="op">·</span>')
+      .replace(/\+/g,'<span class="op"> + </span>');
+  }
+  function row(seg,eq,body,color=''){
+    return `<div class="expr-row"><span class="eseg" style="${color?'color:'+color:''}">${seg}</span><span class="eeq">${eq}</span><span class="ebody">${body}</span></div>`;
+  }
+
+  let h = `<div class="variant-badge">VARIANTA ${vn} · ${desc}</div>`;
+
+  // ── MUX 4:1 ──
+  h += `<div class="expr-panel">
+    <div class="sec-title" style="margin-bottom:10px">MUX 4:1 — Funcție generală</div>`;
+  h += row('Y','=',fmt('Ē̄·(Ā₁·Ā₀·I₀ + Ā₁·A₀·I₁ + A₁·Ā₀·I₂ + A₁·A₀·I₃)'));
+  h += `<div class="sec-title" style="margin-top:14px;margin-bottom:8px">Implementare — Varianta ${vn}: ${desc}</div>`;
+
+  if(gate==='AND' && !neg) {
+    // Variants 1 (fn=2), 9 (fn=4)
+    h += row('Ā₁','=','NOT(A₁)');
+    h += row('Ā₀','=','NOT(A₀)');
+    if(fn===2) {
+      // AND-2 cascaded: T=AND2(addr_bits), P=AND2(T,Ik)
+      h += row('T₀','=',fmt('AND(Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('T₁','=',fmt('AND(Ā₁,A₀)'),'var(--accent2)');
+      h += row('T₂','=',fmt('AND(A₁,Ā₀)'),'var(--accent2)');
+      h += row('T₃','=',fmt('AND(A₁,A₀)'),'var(--accent2)');
+      h += row('P₀','=',fmt('AND(T₀,I₀)'),'var(--accent3)');
+      h += row('P₁','=',fmt('AND(T₁,I₁)'),'var(--accent3)');
+      h += row('P₂','=',fmt('AND(T₂,I₂)'),'var(--accent3)');
+      h += row('P₃','=',fmt('AND(T₃,I₃)'),'var(--accent3)');
+    } else {
+      // AND-4: P=AND4(addr1,addr0,Ik,Ik)
+      h += row('P₀','=',fmt('AND(Ā₁,Ā₀,I₀,I₀)'),'var(--accent3)');
+      h += row('P₁','=',fmt('AND(Ā₁,A₀,I₁,I₁)'),'var(--accent3)');
+      h += row('P₂','=',fmt('AND(A₁,Ā₀,I₂,I₂)'),'var(--accent3)');
+      h += row('P₃','=',fmt('AND(A₁,A₀,I₃,I₃)'),'var(--accent3)');
+    }
+    h += row('Y','=',fmt('OR(P₀,P₁,P₂,P₃)'));
+
+  } else if(gate==='OR' && !neg) {
+    // Variants 2 (fn=2), 10 (fn=3)
+    h += row('Ā₁','=','NOT(A₁)');
+    h += row('Ā₀','=','NOT(A₀)');
+    h += row('Ī','=','NOT(I)');
+    if(fn===2) {
+      // AND3 via NOT(OR2(OR2(a,b),c))
+      h += row('R₀','=',fmt('OR(A₁,A₀)'),'var(--accent2)');
+      h += row('R₁','=',fmt('OR(A₁,Ā₀)'),'var(--accent2)');
+      h += row('R₂','=',fmt('OR(Ā₁,A₀)'),'var(--accent2)');
+      h += row('R₃','=',fmt('OR(Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('P₀','=',fmt('NOT(OR(R₀,Ī))') + ' = ' + fmt('Ā₁·Ā₀·I₀'),'var(--accent3)');
+      h += row('P₁','=',fmt('NOT(OR(R₁,Ī))') + ' = ' + fmt('Ā₁·A₀·I₁'),'var(--accent3)');
+      h += row('P₂','=',fmt('NOT(OR(R₂,Ī))') + ' = ' + fmt('A₁·Ā₀·I₂'),'var(--accent3)');
+      h += row('P₃','=',fmt('NOT(OR(R₃,Ī))') + ' = ' + fmt('A₁·A₀·I₃'),'var(--accent3)');
+    } else {
+      // fn=3: AND3 = NOT(OR3(nA1,nA0,nI))
+      h += row('P₀','=',fmt('NOT(OR(A₁,A₀,Ī))') + ' = ' + fmt('Ā₁·Ā₀·I₀'),'var(--accent3)');
+      h += row('P₁','=',fmt('NOT(OR(A₁,Ā₀,Ī))') + ' = ' + fmt('Ā₁·A₀·I₁'),'var(--accent3)');
+      h += row('P₂','=',fmt('NOT(OR(Ā₁,A₀,Ī))') + ' = ' + fmt('A₁·Ā₀·I₂'),'var(--accent3)');
+      h += row('P₃','=',fmt('NOT(OR(Ā₁,Ā₀,Ī))') + ' = ' + fmt('A₁·A₀·I₃'),'var(--accent3)');
+    }
+    h += row('Y','=',fmt('OR(P₀,P₁,P₂,P₃)'));
+
+  } else if(gate==='AND' && neg) {
+    // Variants 3 (fn=3 NAND), 5 (fn=4 NAND), 6 (fn=2 NAND)
+    h += row('Ā₁','=','NAND(A₁,A₁' + (fn===3?',A₁':fn===4?',A₁,A₁,A₁':'') + ')');
+    h += row('Ā₀','=','NAND(A₀,A₀' + (fn===3?',A₀':fn===4?',A₀,A₀,A₀':'') + ')');
+    if(fn===2) {
+      // NAND2 cascade: T̄=NAND2(addr), T=NAND2(T̄,T̄), P=NAND2(NAND2(T,Ik), NAND2(T,Ik))
+      h += row('T̄₀','=',fmt('NAND(Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('T̄₁','=',fmt('NAND(Ā₁,A₀)'),'var(--accent2)');
+      h += row('T̄₂','=',fmt('NAND(A₁,Ā₀)'),'var(--accent2)');
+      h += row('T̄₃','=',fmt('NAND(A₁,A₀)'),'var(--accent2)');
+      h += row('P₀','=',fmt('NAND(NAND(T̄₀,T̄₀),I₀)→AND(Ā₁·Ā₀,I₀)'),'var(--accent3)');
+      h += row('P₁','=',fmt('NAND(NAND(T̄₁,T̄₁),I₁)→AND(Ā₁·A₀,I₁)'),'var(--accent3)');
+      h += row('P₂','=',fmt('NAND(NAND(T̄₂,T̄₂),I₂)→AND(A₁·Ā₀,I₂)'),'var(--accent3)');
+      h += row('P₃','=',fmt('NAND(NAND(T̄₃,T̄₃),I₃)→AND(A₁·A₀,I₃)'),'var(--accent3)');
+      h += row('Y','=','NAND(NAND(P₀,P₀),NAND(P₁,P₁)) combinat cu P₂,P₃');
+    } else if(fn===3) {
+      // NAND3: P̄k=NAND3(addr1,addr0,Ik), Pk=NOT(P̄k)
+      h += row('P̄₀','=',fmt('NAND(Ā₁,Ā₀,I₀)'),'var(--accent2)');
+      h += row('P̄₁','=',fmt('NAND(Ā₁,A₀,I₁)'),'var(--accent2)');
+      h += row('P̄₂','=',fmt('NAND(A₁,Ā₀,I₂)'),'var(--accent2)');
+      h += row('P̄₃','=',fmt('NAND(A₁,A₀,I₃)'),'var(--accent2)');
+      h += row('OR(P₀..₂)','=',fmt('NAND(P̄₀,P̄₁,P̄₂)'),'var(--accent3)');
+      h += row('Y','=',fmt('NAND(NOT(OR),P̄₃,P̄₃)'));
+    } else {
+      // fn=4: P̄k=NAND4(addr1,addr0,Ik,Ik), Y=NAND4(P̄0,P̄1,P̄2,P̄3)
+      h += row('P̄₀','=',fmt('NAND(Ā₁,Ā₀,I₀,I₀)'),'var(--accent2)');
+      h += row('P̄₁','=',fmt('NAND(Ā₁,A₀,I₁,I₁)'),'var(--accent2)');
+      h += row('P̄₂','=',fmt('NAND(A₁,Ā₀,I₂,I₂)'),'var(--accent2)');
+      h += row('P̄₃','=',fmt('NAND(A₁,A₀,I₃,I₃)'),'var(--accent2)');
+      h += row('Y','=',fmt('NAND(P̄₀,P̄₁,P̄₂,P̄₃)'));
+    }
+
+  } else {
+    // gate==='OR' && neg — NOR variants: 4 (fn=3), 7 (fn=4), 8 (fn=2)
+    h += row('Ā₁','=','NOR(A₁,A₁' + (fn===3?',A₁':fn===4?',A₁,A₁,A₁':'') + ')');
+    h += row('Ā₀','=','NOR(A₀,A₀' + (fn===3?',A₀':fn===4?',A₀,A₀,A₀':'') + ')');
+    if(fn===2) {
+      // NOR2: AND2(a,b)=NOR(NOR(a,a),NOR(b,b)), cascade for AND3
+      h += row('T₀','=',fmt('AND₂(Ā₁,Ā₀)=NOR(NOR(Ā₁,Ā₁),NOR(Ā₀,Ā₀))'),'var(--accent2)');
+      h += row('T₁','=',fmt('AND₂(Ā₁,A₀)'),'var(--accent2)');
+      h += row('T₂','=',fmt('AND₂(A₁,Ā₀)'),'var(--accent2)');
+      h += row('T₃','=',fmt('AND₂(A₁,A₀)'),'var(--accent2)');
+      h += row('P₀','=',fmt('AND₂(T₀,I₀)'),'var(--accent3)');
+      h += row('P₁','=',fmt('AND₂(T₁,I₁)'),'var(--accent3)');
+      h += row('P₂','=',fmt('AND₂(T₂,I₂)'),'var(--accent3)');
+      h += row('P₃','=',fmt('AND₂(T₃,I₃)'),'var(--accent3)');
+      h += row('Y','=',fmt('OR(P₀,P₁,P₂,P₃) via NOR'));
+    } else if(fn===3) {
+      // NOR3: AND3(a,b,c)=NOR3(NOT(a),NOT(b),NOT(c)), NOT(x)=NOR3(x,x,x)
+      h += row('P₀','=',fmt('NOR(NOR(Ā₁,Ā₁,Ā₁),NOR(Ā₀,Ā₀,Ā₀),NOR(I₀,I₀,I₀))'),'var(--accent3)');
+      h += row('P₁','=',fmt('NOR(NOR(Ā₁,Ā₁,Ā₁),NOR(A₀,A₀,A₀),NOR(I₁,I₁,I₁))'),'var(--accent3)');
+      h += row('P₂','=',fmt('NOR(NOR(A₁,A₁,A₁),NOR(Ā₀,Ā₀,Ā₀),NOR(I₂,I₂,I₂))'),'var(--accent3)');
+      h += row('P₃','=',fmt('NOR(NOR(A₁,A₁,A₁),NOR(A₀,A₀,A₀),NOR(I₃,I₃,I₃))'),'var(--accent3)');
+      h += row('Y','=',fmt('OR₃(P₀,P₁,P₂,P₃) via NOR'));
+    } else {
+      // fn=4: AND4(a,b,c,d)=NOR4(NOT(a),NOT(b),NOT(c),NOT(d)), NOT(x)=NOR4(x,x,x,x)
+      h += row('P₀','=',fmt('NOR(Ā̄₁,Ā̄₀,Ī,Ī)') + ' = ' + fmt('Ā₁·Ā₀·I₀'),'var(--accent3)');
+      h += row('P₁','=',fmt('NOR(Ā̄₁,A₀,Ī,Ī)') + ' = ' + fmt('Ā₁·A₀·I₁'),'var(--accent3)');
+      h += row('P₂','=',fmt('NOR(A₁,Ā̄₀,Ī,Ī)') + ' = ' + fmt('A₁·Ā₀·I₂'),'var(--accent3)');
+      h += row('P₃','=',fmt('NOR(A₁,A₀,Ī,Ī)') + ' = ' + fmt('A₁·A₀·I₃'),'var(--accent3)');
+      h += row('Y','=',fmt('OR(P₀,P₁,P₂,P₃)'));
+    }
+  }
+  h += '</div>';
+
+  // ── DMUX 1:4 ──
+  h += `<div class="expr-panel">
+    <div class="sec-title" style="margin-bottom:10px">DMUX 1:4 — Funcții de ieșire (general)</div>`;
+  h += row('Y₀','=',fmt('I·Ā₁·Ā₀'));
+  h += row('Y₁','=',fmt('I·Ā₁·A₀'));
+  h += row('Y₂','=',fmt('I·A₁·Ā₀'));
+  h += row('Y₃','=',fmt('I·A₁·A₀'));
+  h += `<div class="sec-title" style="margin-top:14px;margin-bottom:8px">Implementare — Varianta ${vn}: ${desc}</div>`;
+
+  if(gate==='AND' && !neg) {
+    if(fn===2) {
+      h += row('T₀','=',fmt('AND(Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₀','=',fmt('AND(T₀,I)'),'var(--accent3)');
+      h += row('T₁','=',fmt('AND(Ā₁,A₀)'),'var(--accent2)');
+      h += row('Y₁','=',fmt('AND(T₁,I)'),'var(--accent3)');
+      h += row('T₂','=',fmt('AND(A₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₂','=',fmt('AND(T₂,I)'),'var(--accent3)');
+      h += row('T₃','=',fmt('AND(A₁,A₀)'),'var(--accent2)');
+      h += row('Y₃','=',fmt('AND(T₃,I)'),'var(--accent3)');
+    } else {
+      h += row('Y₀','=',fmt('AND(I,Ā₁,Ā₀,I)'),'var(--accent3)');
+      h += row('Y₁','=',fmt('AND(I,Ā₁,A₀,I)'),'var(--accent3)');
+      h += row('Y₂','=',fmt('AND(I,A₁,Ā₀,I)'),'var(--accent3)');
+      h += row('Y₃','=',fmt('AND(I,A₁,A₀,I)'),'var(--accent3)');
+    }
+  } else if(gate==='OR' && !neg) {
+    if(fn===2) {
+      h += row('Y₀','=',fmt('NOT(OR(OR(A₁,A₀),Ī))'),'var(--accent3)');
+      h += row('Y₁','=',fmt('NOT(OR(OR(A₁,Ā₀),Ī))'),'var(--accent3)');
+      h += row('Y₂','=',fmt('NOT(OR(OR(Ā₁,A₀),Ī))'),'var(--accent3)');
+      h += row('Y₃','=',fmt('NOT(OR(OR(Ā₁,Ā₀),Ī))'),'var(--accent3)');
+    } else {
+      h += row('Y₀','=',fmt('NOT(OR(A₁,A₀,Ī))'),'var(--accent3)');
+      h += row('Y₁','=',fmt('NOT(OR(A₁,Ā₀,Ī))'),'var(--accent3)');
+      h += row('Y₂','=',fmt('NOT(OR(Ā₁,A₀,Ī))'),'var(--accent3)');
+      h += row('Y₃','=',fmt('NOT(OR(Ā₁,Ā₀,Ī))'),'var(--accent3)');
+    }
+  } else if(gate==='AND' && neg) {
+    if(fn===2) {
+      h += row('T₀','=',fmt('NAND(Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₀','=',fmt('NAND(NAND(T₀,T₀),I) →AND(Ā₁·Ā₀,I)'),'var(--accent3)');
+      h += row('T₁','=',fmt('NAND(Ā₁,A₀)'),'var(--accent2)');
+      h += row('Y₁','=',fmt('NAND(NAND(T₁,T₁),I)'),'var(--accent3)');
+      h += row('T₂','=',fmt('NAND(A₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₂','=',fmt('NAND(NAND(T₂,T₂),I)'),'var(--accent3)');
+      h += row('T₃','=',fmt('NAND(A₁,A₀)'),'var(--accent2)');
+      h += row('Y₃','=',fmt('NAND(NAND(T₃,T₃),I)'),'var(--accent3)');
+    } else if(fn===3) {
+      h += row('Ȳ₀','=',fmt('NAND(I,Ā₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₀','=',fmt('NAND(Ȳ₀,Ȳ₀,Ȳ₀)'),'var(--accent3)');
+      h += row('Ȳ₁','=',fmt('NAND(I,Ā₁,A₀)'),'var(--accent2)');
+      h += row('Y₁','=',fmt('NAND(Ȳ₁,Ȳ₁,Ȳ₁)'),'var(--accent3)');
+      h += row('Ȳ₂','=',fmt('NAND(I,A₁,Ā₀)'),'var(--accent2)');
+      h += row('Y₂','=',fmt('NAND(Ȳ₂,Ȳ₂,Ȳ₂)'),'var(--accent3)');
+      h += row('Ȳ₃','=',fmt('NAND(I,A₁,A₀)'),'var(--accent2)');
+      h += row('Y₃','=',fmt('NAND(Ȳ₃,Ȳ₃,Ȳ₃)'),'var(--accent3)');
+    } else {
+      h += row('Ȳ₀','=',fmt('NAND(I,Ā₁,Ā₀,I)'),'var(--accent2)');
+      h += row('Y₀','=',fmt('NAND(Ȳ₀,Ȳ₀,Ȳ₀,Ȳ₀)'),'var(--accent3)');
+      h += row('Ȳ₁','=',fmt('NAND(I,Ā₁,A₀,I)'),'var(--accent2)');
+      h += row('Y₁','=',fmt('NAND(Ȳ₁,Ȳ₁,Ȳ₁,Ȳ₁)'),'var(--accent3)');
+      h += row('Ȳ₂','=',fmt('NAND(I,A₁,Ā₀,I)'),'var(--accent2)');
+      h += row('Y₂','=',fmt('NAND(Ȳ₂,Ȳ₂,Ȳ₂,Ȳ₂)'),'var(--accent3)');
+      h += row('Ȳ₃','=',fmt('NAND(I,A₁,A₀,I)'),'var(--accent2)');
+      h += row('Y₃','=',fmt('NAND(Ȳ₃,Ȳ₃,Ȳ₃,Ȳ₃)'),'var(--accent3)');
+    }
+  } else {
+    // NOR
+    if(fn===2) {
+      h += row('T₀','=',fmt('AND₂(Ā₁,Ā₀) via NOR'),'var(--accent2)');
+      h += row('Y₀','=',fmt('AND₂(T₀,I) via NOR'),'var(--accent3)');
+      h += row('T₁','=',fmt('AND₂(Ā₁,A₀) via NOR'),'var(--accent2)');
+      h += row('Y₁','=',fmt('AND₂(T₁,I) via NOR'),'var(--accent3)');
+      h += row('T₂','=',fmt('AND₂(A₁,Ā₀) via NOR'),'var(--accent2)');
+      h += row('Y₂','=',fmt('AND₂(T₂,I) via NOR'),'var(--accent3)');
+      h += row('T₃','=',fmt('AND₂(A₁,A₀) via NOR'),'var(--accent2)');
+      h += row('Y₃','=',fmt('AND₂(T₃,I) via NOR'),'var(--accent3)');
+    } else if(fn===3) {
+      h += row('Y₀','=',fmt('NOR(NOR(A₁,A₁,A₁),NOR(A₀,A₀,A₀),NOR(I,I,I))'),'var(--accent3)');
+      h += row('Y₁','=',fmt('NOR(NOR(A₁,A₁,A₁),NOR(Ā₀,Ā₀,Ā₀),NOR(I,I,I))'),'var(--accent3)');
+      h += row('Y₂','=',fmt('NOR(NOR(Ā₁,Ā₁,Ā₁),NOR(A₀,A₀,A₀),NOR(I,I,I))'),'var(--accent3)');
+      h += row('Y₃','=',fmt('NOR(NOR(Ā₁,Ā₁,Ā₁),NOR(Ā₀,Ā₀,Ā₀),NOR(I,I,I))'),'var(--accent3)');
+    } else {
+      h += row('Y₀','=',fmt('NOR(NOR(Ā₁,…),NOR(Ā₀,…),NOR(I,…),NOR(I,…))'),'var(--accent3)');
+      h += row('Y₁','=',fmt('NOR(NOR(Ā₁,…),NOR(A₀,…),NOR(I,…),NOR(I,…))'),'var(--accent3)');
+      h += row('Y₂','=',fmt('NOR(NOR(A₁,…),NOR(Ā₀,…),NOR(I,…),NOR(I,…))'),'var(--accent3)');
+      h += row('Y₃','=',fmt('NOR(NOR(A₁,…),NOR(A₀,…),NOR(I,…),NOR(I,…))'),'var(--accent3)');
+    }
+  }
+  h += '</div>';
+  document.getElementById('exprContainer').innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════
+// INFO
+// ══════════════════════════════════════════════════
+function renderInfo() {
+  const vn = document.getElementById('varSel').value;
+  document.getElementById('infoContainer').innerHTML = `
+    <div class="variant-badge">VARIANTA ${vn} · ${V.label}</div>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-card-lbl">Elemente logice</div><div class="info-card-val">${V.desc}</div></div>
+      <div class="info-card"><div class="info-card-lbl">Număr de intrări</div><div class="info-card-val">${V.fanin}</div></div>
+      <div class="info-card"><div class="info-card-lbl">MUX</div><div class="info-card-val">4 intrări, 2 adrese</div></div>
+      <div class="info-card"><div class="info-card-lbl">DMUX</div><div class="info-card-val">4 ieșiri, 2 adrese</div></div>
+    </div>
+    <div class="expr-panel" style="max-width:580px">
+      <div class="sec-title" style="margin-bottom:10px">Desfășurarea lucrării</div>
+      <div style="font-size:13px;line-height:2;color:var(--text)">
+        <p>3.1 De realizat schema conform variantei ${vn}</p>
+        <p>3.2 De aplicat pe rând toate combinațiile semnalelor de comandă</p>
+        <p>3.3 De memorat schemele în darea de seamă pentru fiecare combinație</p>
+        <p>3.4 Concluzii</p>
+        <br>
+        <p style="color:var(--muted);font-size:11px">Baza: <strong>${V.label}</strong> · Implementare în CircuitMaker</p>
+        <p style="color:var(--muted);font-size:11px">MUX: Y = Ā₁Ā₀I₀ + Ā₁A₀I₁ + A₁Ā₀I₂ + A₁A₀I₃</p>
+        <p style="color:var(--muted);font-size:11px">DMUX: Yᵢ = I·(adresă selectată = i)</p>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// CANVAS / SCHEMA
+// ══════════════════════════════════════════════════
+function resizeCanvas() {
+  const body = document.getElementById('schemaBody');
+  cv.width = body.clientWidth; cv.height = body.clientHeight;
+}
+
+cv.addEventListener('mousedown', e=>{ panning=true; px0=e.clientX-tx; py0=e.clientY-ty; });
+cv.addEventListener('mousemove', e=>{ if(panning){ tx=e.clientX-px0; ty=e.clientY-py0; drawSchema(); } });
+cv.addEventListener('mouseup', ()=>panning=false);
+cv.addEventListener('mouseleave', ()=>panning=false);
+cv.addEventListener('wheel', e=>{ e.preventDefault(); doZoom(e.deltaY<0?1.12:0.89, e.clientX, e.clientY); },{passive:false});
+window.addEventListener('resize', ()=>{ resizeCanvas(); drawSchema(); });
+
+function doZoom(f, mx, my) {
+  const cx=mx??cv.width/2, cy=my??cv.height/2;
+  tx=cx-f*(cx-tx); ty=cy-f*(cy-ty);
+  sc=Math.max(0.15,Math.min(5,sc*f));
+  drawSchema();
+}
+function resetView(){ sc=1; tx=0; ty=0; drawSchema(); }
+function exportPNG(){
+  const a=document.createElement('a');
+  a.download=`schema_var${document.getElementById('varSel').value}_${circuitMode}.png`;
+  a.href=cv.toDataURL(); a.click();
+}
+
+// Gate drawing functions
+function gOR(cx,cy,W,H,neg){
+  ctx.beginPath();
+  const lx=cx-W/2,rx=cx+W/2,top=cy-H/2,bot=cy+H/2;
+  ctx.moveTo(lx,top);
+  ctx.quadraticCurveTo(lx+W*.28,cy,lx,bot);
+  ctx.quadraticCurveTo(cx,bot+H*.1,rx,cy);
+  ctx.quadraticCurveTo(cx,top-H*.1,lx,top);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(neg){ gBubble(rx,cy); return rx+10; }
+  return rx;
+}
+function gAND(cx,cy,W,H,neg){
+  ctx.beginPath();
+  const lx=cx-W/2,rx=cx+W/2,top=cy-H/2,bot=cy+H/2;
+  ctx.moveTo(lx,top); ctx.lineTo(cx,top);
+  ctx.arc(cx,cy,H/2,-Math.PI/2,Math.PI/2);
+  ctx.lineTo(lx,bot); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(neg){ gBubble(rx,cy); return rx+10; }
+  return rx;
+}
+function gNOT(cx,cy,sz){
+  ctx.beginPath();
+  ctx.moveTo(cx-sz/2,cy-sz/2); ctx.lineTo(cx-sz/2,cy+sz/2); ctx.lineTo(cx+sz/2-5,cy);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  gBubble(cx+sz/2-5,cy);
+}
+function gBubble(x,y){ ctx.beginPath(); ctx.arc(x+5,y,4.5,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+
+function wline(x1,y1,x2,y2,active){
+  ctx.strokeStyle=active?'#39ff14':'#2d3748';
+  ctx.lineWidth=active?2:1.2;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+}
+function wdash(x1,y1,x2,y2,active){
+  ctx.strokeStyle=active?'#ff6b35':'#1a2a40';
+  ctx.lineWidth=active?1.8:1;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+function dot(x,y,active){ ctx.fillStyle=active?'#39ff14':'#2d3748'; ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2); ctx.fill(); }
+
+function drawGrid(){
+  const W=cv.width, H=cv.height;
+  ctx.strokeStyle='#0f1525'; ctx.lineWidth=.5;
+  const gs=22*sc, ox=((tx%gs)+gs)%gs, oy=((ty%gs)+gs)%gs;
+  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+function label(x,y,text,color,size=10,align='center'){
+  ctx.fillStyle=color; ctx.font=`${size}px "Share Tech Mono"`;
+  ctx.textAlign=align; ctx.textBaseline='middle';
+  ctx.fillText(text,x,y);
+}
+
+// ── Draw MUX schema ──
+function drawMUX() {
+  const A1=getA1(), A0=getA0();
+  const fn = V.fanin;
+  const isNeg = V.negGate;
+  const baseGate = V.gate;
+  const needsCascade = fn === 2;
+  const hasEnable = fn === 4; // Ē only fits as 4th input when fanin=4
+
+  const IX=-30, NOTX=80, AND1X=210, AND2X=320, ORX=440, OUTX=530;
+  const GW=52, GH=24;
+  const VSPACE=66, BASE_Y=30;
+  const BUS_BOT = BASE_Y + 4*VSPACE;
+
+  label(IX, -60, `MUX 4:1 — Varianta ${document.getElementById('varSel').value} — ${V.label}`, '#00d4ff', 12, 'left');
+
+  // ── Ē input (only when fanin=4: fits as 4th gate input) ──
+  const E = enableBar;
+  const Enot = 1-E;
+  const EbusX = IX - 55;
+  if(hasEnable) {
+    label(EbusX, -60, `Ē=${E}`, E?'#ff6b35':'#4a5568', 11, 'center');
+    ctx.fillStyle='#0a1628'; ctx.strokeStyle=E?'#ff6b35':'#1e6090'; ctx.lineWidth=1.5;
+    gNOT(EbusX, -38, 16);
+    wdash(EbusX+8, -28, EbusX+8, BUS_BOT, Enot);
+    label(EbusX+14, -44, 'E=NOT(Ē)', Enot?'#39ff14':'#4a5568', 8, 'left');
+  }
+
+  // ── Address NOT gates ──
+  label(NOTX, -35, 'A₁', '#00d4ff', 11);
+  label(NOTX+50, -35, 'A₀', '#00d4ff', 11);
+  ctx.fillStyle='#0a1628'; ctx.strokeStyle='#1e6090'; ctx.lineWidth=1.5;
+  gNOT(NOTX, -15, 16);
+  gNOT(NOTX+50, -15, 16);
+  wline(NOTX,    -25, NOTX,    BUS_BOT, A1);
+  wline(NOTX+50, -25, NOTX+50, BUS_BOT, A0);
+  wdash(NOTX+14, -5,  NOTX+14, BUS_BOT, 1-A1);
+  wdash(NOTX+64, -5,  NOTX+64, BUS_BOT, 1-A0);
+
+  const products = [
+    {name:'P₀=Ā₁·Ā₀·I₀', useA1:false, useA0:false, inp:0},
+    {name:'P₁=Ā₁·A₀·I₁', useA1:false, useA0:true,  inp:1},
+    {name:'P₂=A₁·Ā₀·I₂', useA1:true,  useA0:false, inp:2},
+    {name:'P₃=A₁·A₀·I₃', useA1:true,  useA0:true,  inp:3},
+  ];
+  const pVals=[], orYs=[];
+
+  products.forEach((p,pi)=>{
+    const gy = BASE_Y + pi*VSPACE;
+    orYs.push(gy);
+    const a1val = p.useA1 ? A1 : 1-A1;
+    const a0val = p.useA0 ? A0 : 1-A0;
+    const ival  = muxInputs[p.inp];
+    const pval  = hasEnable ? (Enot & a1val & a0val & ival) : (a1val & a0val & ival);
+    pVals.push(pval);
+
+    label(IX-10, gy, `I${p.inp}=${ival}`, ival?'#39ff14':'#4a5568', 10, 'right');
+    wline(IX, gy, AND1X-GW/2, gy, ival);
+
+    const a1x = p.useA1 ? NOTX : NOTX+14;
+    const a0x = p.useA0 ? NOTX+50 : NOTX+64;
+    const a1active = p.useA1 ? A1 : 1-A1;
+    const a0active = p.useA0 ? A0 : 1-A0;
+    const gn = isNeg?(baseGate==='AND'?'NAND':'NOR'):baseGate;
+
+    if(needsCascade) {
+      wline(a1x, gy-7, AND1X-GW/2, gy-7, a1active); dot(a1x, gy-7, a1active);
+      wline(a0x, gy+7, AND1X-GW/2, gy+7, a0active); dot(a0x, gy+7, a0active);
+      const s1val = a1val & a0val;
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=s1val?'#ffaa00':'#1e6090'; ctx.lineWidth=s1val?2:1.5;
+      let s1out = baseGate==='AND'?gAND(AND1X,gy,GW,GH,isNeg):gOR(AND1X,gy,GW,GH,isNeg);
+      label(AND1X, gy, gn, s1val?'#ffaa00':'#4a5568', 8);
+      const s1sig = isNeg ? 1-s1val : s1val;
+      wline(s1out, gy, AND2X-GW/2, gy, s1sig);
+      wline(IX, gy+10, AND2X-GW/2, gy+10, ival);
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=pval?'#39ff14':'#1e6090'; ctx.lineWidth=pval?2:1.5;
+      let g2out = baseGate==='AND'?gAND(AND2X,gy,GW,GH,isNeg):gOR(AND2X,gy,GW,GH,isNeg);
+      label(AND2X, gy, gn, pval?'#39ff14':'#4a5568', 8);
+      wline(g2out, gy, ORX-GW/2, gy, pval);
+    } else {
+      wline(a1x, gy-7, AND1X-GW/2, gy-7, a1active); dot(a1x, gy-7, a1active);
+      wline(a0x, gy+7, AND1X-GW/2, gy+7, a0active); dot(a0x, gy+7, a0active);
+      if(hasEnable) {
+        wdash(EbusX+8, gy, AND1X-GW/2, gy-14, Enot);
+        dot(EbusX+8, gy, Enot);
+      }
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=pval?'#39ff14':'#1e6090'; ctx.lineWidth=pval?2:1.5;
+      let gout = baseGate==='AND'?gAND(AND1X,gy,GW,GH,isNeg):gOR(AND1X,gy,GW,GH,isNeg);
+      label(AND1X, gy, gn, pval?'#39ff14':'#4a5568', 8);
+      wline(gout, gy, ORX-GW/2, gy, pval);
+    }
+    const pname = hasEnable ? p.name+'·E' : p.name;
+    label((needsCascade?AND2X:AND1X)+GW/2+20, gy, pname, pval?'#39ff14':'#4a5568', 9, 'left');
+  });
+
+  const finalY = BASE_Y + 1.5*VSPACE;
+  const fval = getMuxOut();
+  const orH = Math.min(80, 3*VSPACE);
+  ctx.fillStyle='#0a1628';
+  ctx.strokeStyle=fval?'#00d4ff':'#1e6090'; ctx.lineWidth=fval?2.5:1.5;
+  const orOut = gOR(ORX, finalY, GW, orH, false);
+  label(ORX, finalY, 'OR', fval?'#00d4ff':'#4a5568', 9);
+  orYs.forEach((gy,i)=>{
+    const iny = finalY - orH/2 + 10 + i*(orH-20)/3;
+    wline(ORX-GW/2, gy, ORX-GW/2, iny, pVals[i]);
+    dot(ORX-GW/2, iny, pVals[i]);
+  });
+  wline(orOut, finalY, OUTX, finalY, fval);
+  ctx.fillStyle=fval?'rgba(57,255,20,.12)':'rgba(74,85,104,.1)';
+  ctx.strokeStyle=fval?'#39ff14':'#4a5568'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(OUTX+14, finalY, 14, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  label(OUTX+14, finalY, fval.toString(), fval?'#39ff14':'#555', 12);
+  label(OUTX+34, finalY, `Y = ${fval}`, '#00d4ff', 13, 'left');
+
+  if(needsCascade) {
+    label(IX, BUS_BOT+20, `* fanin=2: AND-3 realizat cu 2× ${isNeg?'NAND':'AND'}-2 cascadate | Ē nu se conectează`, '#ff6b35', 9, 'left');
+  } else if(!hasEnable) {
+    label(IX, BUS_BOT+20, `* fanin=${fn}: toate 3 intrări ocupate (Ā₁, Ā₀, Iₖ) | Ē nu se conectează`, '#ff6b35', 9, 'left');
+  }
+}
+
+
+
+// ── Draw DMUX schema ──
+function drawDMUX() {
+  const A1=getA1(), A0=getA0(), I=dataInput;
+  const fn = V.fanin;
+  const isNeg = V.negGate;
+  const baseGate = V.gate;
+  const needsCascade = fn === 2;
+  // fanin=4: DMUX uses AND4(I, addr1, addr0, I) — I repeated as 4th pin
+  const fn4 = fn === 4;
+  const gn = isNeg ? (baseGate==='AND'?'NAND':'NOR') : baseGate;
+
+  const IX=-20, NOTX=80, AND1X=210, AND2X=310, OUTX=400;
+  const GW=52, GH=24;
+  const BASE_Y=30, VSPACE=66;
+  // Address buses only need to reach last output row (BASE_Y + 3*VSPACE)
+  const BUS_BOT = BASE_Y + 3*VSPACE;
+
+  label(IX, -60, `DMUX 1:4 — Varianta ${document.getElementById('varSel').value} — ${V.label}`, '#bf5fff', 12, 'left');
+
+  // Input I bus
+  label(IX-10, BASE_Y+1.5*VSPACE, `I=${I}`, I?'#39ff14':'#4a5568', 11, 'right');
+  const IbusX = IX + 10;
+  wline(IbusX, BASE_Y, IbusX, BUS_BOT, I);
+
+  // Address NOT gates & buses
+  label(NOTX, -35, 'A₁', '#00d4ff', 11);
+  label(NOTX+50, -35, 'A₀', '#00d4ff', 11);
+  ctx.fillStyle='#0a1628'; ctx.strokeStyle='#1e6090'; ctx.lineWidth=1.5;
+  gNOT(NOTX, -15, 16);
+  gNOT(NOTX+50, -15, 16);
+  wline(NOTX,    -25, NOTX,    BUS_BOT, A1);
+  wline(NOTX+50, -25, NOTX+50, BUS_BOT, A0);
+  wdash(NOTX+14, -5,  NOTX+14, BUS_BOT, 1-A1);
+  wdash(NOTX+64, -5,  NOTX+64, BUS_BOT, 1-A0);
+
+  const outputs = [
+    {name:'Y₀=I·Ā₁·Ā₀', useA1:false, useA0:false},
+    {name:'Y₁=I·Ā₁·A₀', useA1:false, useA0:true},
+    {name:'Y₂=I·A₁·Ā₀', useA1:true,  useA0:false},
+    {name:'Y₃=I·A₁·A₀', useA1:true,  useA0:true},
+  ];
+
+  outputs.forEach((o,oi)=>{
+    const gy = BASE_Y + oi*VSPACE;
+    const a1val = o.useA1 ? A1 : 1-A1;
+    const a0val = o.useA0 ? A0 : 1-A0;
+    const yval  = a1val & a0val & I;
+
+    const a1x = o.useA1 ? NOTX : NOTX+14;
+    const a0x = o.useA0 ? NOTX+50 : NOTX+64;
+
+    // I tap from vertical bus
+    wline(IbusX, gy, AND1X-GW/2, gy, I);
+    dot(IbusX, gy, I);
+
+    if(needsCascade) {
+      // fanin=2: Stage1=gate2(addr1,addr0), Stage2=gate2(stage1,I)
+      wline(a1x, gy-7, AND1X-GW/2, gy-7, a1val); dot(a1x, gy-7, a1val);
+      wline(a0x, gy+7, AND1X-GW/2, gy+7, a0val); dot(a0x, gy+7, a0val);
+      const s1 = a1val & a0val;
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=s1?'#ffaa00':'#1e6090'; ctx.lineWidth=s1?2:1.5;
+      let s1out = baseGate==='AND'?gAND(AND1X,gy,GW,GH,isNeg):gOR(AND1X,gy,GW,GH,isNeg);
+      label(AND1X, gy, gn, s1?'#ffaa00':'#4a5568', 8);
+      const s1sig = isNeg ? 1-s1 : s1;
+      // Stage 2 inputs: stage1 result + I
+      wline(s1out, gy, AND2X-GW/2, gy, s1sig);
+      wline(IbusX, gy+10, AND2X-GW/2, gy+10, I);
+      dot(IbusX, gy+10, I);
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=yval?'#bf5fff':'#1e6090'; ctx.lineWidth=yval?2:1.5;
+      let g2out = baseGate==='AND'?gAND(AND2X,gy,GW,GH,isNeg):gOR(AND2X,gy,GW,GH,isNeg);
+      label(AND2X, gy, gn, yval?'#bf5fff':'#4a5568', 8);
+      wline(g2out, gy, OUTX, gy, yval);
+    } else {
+      // fanin=3 or 4: direct gate with inputs I, addr1, addr0
+      // For fanin=4: 4th input = I again (repeated) → AND4(I, addr1, addr0, I)
+      wline(a1x, gy-7, AND1X-GW/2, gy-7, a1val); dot(a1x, gy-7, a1val);
+      wline(a0x, gy+7, AND1X-GW/2, gy+7, a0val); dot(a0x, gy+7, a0val);
+      if(fn4) {
+        // Draw extra I wire as 4th input (dashed to show it's repeated)
+        wdash(IbusX, gy-14, AND1X-GW/2, gy-14, I);
+        dot(IbusX, gy-14, I);
+      }
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=yval?'#bf5fff':'#1e6090'; ctx.lineWidth=yval?2:1.5;
+      let gout = baseGate==='AND'?gAND(AND1X,gy,GW,GH,isNeg):gOR(AND1X,gy,GW,GH,isNeg);
+      label(AND1X, gy, gn, yval?'#bf5fff':'#4a5568', 8);
+      wline(gout, gy, OUTX, gy, yval);
+    }
+
+    // Output circle
+    ctx.fillStyle=yval?'rgba(191,95,255,.15)':'rgba(74,85,104,.1)';
+    ctx.strokeStyle=yval?'#bf5fff':'#4a5568'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(OUTX+13, gy, 13, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    label(OUTX+13, gy, yval.toString(), yval?'#bf5fff':'#555', 12);
+    label(OUTX+33, gy, `${o.name.split('=')[0]}=${yval}`, yval?'#bf5fff':'#4a5568', 11, 'left');
+  });
+
+  // Notes
+  if(needsCascade) {
+    label(IX, BUS_BOT+20, `* fanin=2: AND-3 realizat cu 2× ${gn}-2 cascadate`, '#ff6b35', 9, 'left');
+  } else if(fn4) {
+    label(IX, BUS_BOT+20, `* fanin=4: ${gn}4(I, Ā₁/A₁, Ā₀/A₀, I) — I repetat pe pinul 4`, '#ff6b35', 9, 'left');
+  }
+}
+
+function drawSchema() {
+  if(!document.getElementById('tabSchema').classList.contains('active')) return;
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#070b15'; ctx.fillRect(0,0,W,H);
+  drawGrid();
+
+  ctx.save();
+  ctx.translate(tx+120, ty+120);
+  ctx.scale(sc,sc);
+  ctx.textBaseline='middle';
+
+  if(circuitMode==='MUX') drawMUX();
+  else drawDMUX();
+
+  // Legend
+  ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  const ly = -cv.height/sc*0.5 + 20;
+  ctx.fillStyle='#39ff14'; ctx.fillText('━ semnal 1 (activ)', 0, ly);
+  ctx.fillStyle='#2d3748'; ctx.fillText('━ semnal 0', 180, ly);
+  ctx.fillStyle='#ff6b35'; ctx.fillText('╍ inversat (NOT)', 320, ly);
+  ctx.restore();
+
+  document.getElementById('zinfo').textContent=`zoom: ${Math.round(sc*100)}% | drag to pan | scroll = zoom`;
+}
+
+// ══════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-pane,.schema-pane').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='tabSchema'){ resizeCanvas(); drawSchema(); }
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+// Set initial variant (variant 1 = fanin 2 → MUX 2:1)
+applyVariant();
+document.getElementById('btnMUX').textContent = `MUX ${getMuxSize()}:1`;
+document.getElementById('btnDMUX').textContent = `DMUX 1:${getMuxSize()}`;
+new ResizeObserver(()=>{ resizeCanvas(); drawSchema(); }).observe(document.getElementById('schemaBody'));
+resizeCanvas();
+</script>
+</body>
+</html>

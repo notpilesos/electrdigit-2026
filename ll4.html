@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuite Bistabile | ED 2026</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">Lucrarea de Laborator · Circuite Digitale Secvențiale · ED 2026</div>
+    <h1>Circuite <span>Bistabile</span></h1>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <span class="clbl">Bistabil:</span>
+    <select id="sel" onchange="init(this.value)">
+      <option value="SR_NOR">SR Asincron — NOR</option>
+      <option value="SR_NAND">SR Asincron — NAND</option>
+      <option value="SR_SYNC">SR Sincron</option>
+      <option value="D_SYNC">D Sincron (Latch)</option>
+      <option value="T_SYNC">T Sincron</option>
+      <option value="JK_ASYNC">JK Asincron</option>
+      <option value="JK_SYNC">JK Sincron</option>
+    </select>
+  </div>
+</header>
+<div class="cbar" id="cbar"></div>
+<div class="body">
+  <div class="side">
+    <div>
+      <div class="stit">Stare Q</div>
+      <div class="qd" id="qd" style="color:#39ff14">Q = 0</div>
+      <div style="margin-top:4px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--mu);text-align:center" id="qbd">Q̄ = 1</div>
+    </div>
+    <div><div class="stit">Intrări</div><div class="ib" id="si">—</div></div>
+    <div><div class="stit">Operație</div><div class="ib" id="so" style="color:var(--ac2)">—</div></div>
+    <div><div class="stit">Istoric Q</div><div class="wf" id="wf"></div></div>
+  </div>
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" onclick="tab('tS',this)">Schema</button>
+      <button class="tab" onclick="tab('tT',this)">Tabel Adevăr</button>
+      <button class="tab" onclick="tab('tE',this)">Expresii</button>
+      <button class="tab" onclick="tab('tI',this)">Teorie</button>
+    </div>
+    <div id="tS" class="spane active">
+      <div class="stb">
+        <button onclick="zoom(1.2)">＋</button>
+        <button onclick="zoom(.83)">－</button>
+        <button onclick="rst()">↺ Reset</button>
+        <button onclick="savePng()">⬇ PNG</button>
+        <span class="zi" id="zi">scroll=zoom · drag=pan</span>
+      </div>
+      <div class="sbody" id="sbody"><canvas id="cv"></canvas></div>
+    </div>
+    <div id="tT" class="pane"><div id="tt"></div></div>
+    <div id="tE" class="pane"><div id="te"></div></div>
+    <div id="tI" class="pane"><div id="ti"></div></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════
+// CANVAS SETUP
+// ═══════════════════════════════════
+const cv=document.getElementById('cv'), cx=cv.getContext('2d');
+let sc=1, tx=0, ty=0, drag=false, mx=0, my=0;
+cv.addEventListener('mousedown',e=>{drag=true;mx=e.clientX;my=e.clientY;});
+cv.addEventListener('mousemove',e=>{if(!drag)return;tx+=e.clientX-mx;ty+=e.clientY-my;mx=e.clientX;my=e.clientY;draw();});
+cv.addEventListener('mouseup',()=>drag=false);
+cv.addEventListener('mouseleave',()=>drag=false);
+cv.addEventListener('wheel',e=>{e.preventDefault();sc=Math.min(5,Math.max(.2,sc*(e.deltaY<0?1.1:.91)));draw();},{passive:false});
+function zoom(f){sc=Math.min(5,Math.max(.2,sc*f));draw();}
+function rst(){sc=1;tx=0;ty=0;draw();}
+function savePng(){const a=document.createElement('a');a.href=cv.toDataURL();a.download='bistabil_'+BT+'.png';a.click();}
+function resize(){const b=document.getElementById('sbody');cv.width=b.clientWidth;cv.height=b.clientHeight;}
+new ResizeObserver(()=>{resize();draw();}).observe(document.getElementById('sbody'));
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let BT='SR_NOR', Q=0, INP={}, HIST=[];
+
+// ═══════════════════════════════════
+// DRAWING HELPERS
+// ═══════════════════════════════════
+// All coordinates are in schema space (centered at 0,0).
+// Canvas transform is applied once per draw().
+
+const BG='#070b15', GBG='#0c1828';
+
+// wire color / width based on signal value
+function wCol(v){ return v===1?'#39ff14':v===0?'#1a3560':'#4a5568'; }
+function wWid(v){ return v===1?2.2:1.5; }
+
+// draw a wire segment
+function seg(x1,y1,x2,y2,v){
+  cx.beginPath(); cx.moveTo(x1,y1); cx.lineTo(x2,y2);
+  cx.strokeStyle=wCol(v); cx.lineWidth=wWid(v); cx.setLineDash([]); cx.stroke();
+}
+// dashed segment (CLK signal)
+function segD(x1,y1,x2,y2,v){
+  cx.beginPath(); cx.moveTo(x1,y1); cx.lineTo(x2,y2);
+  cx.strokeStyle=v?'#ffaa22':'#253060'; cx.lineWidth=1.4;
+  cx.setLineDash([6,4]); cx.stroke(); cx.setLineDash([]);
+}
+// junction dot
+function jdot(x,y,v){
+  cx.beginPath(); cx.arc(x,y,5,0,Math.PI*2);
+  cx.fillStyle=wCol(v); cx.fill();
+}
+// text label
+function lbl(x,y,s,col,sz,al){
+  cx.fillStyle=col||'#c8d6e5';
+  cx.font=`${sz||11}px "Share Tech Mono"`;
+  cx.textAlign=al||'center'; cx.textBaseline='middle';
+  cx.fillText(s,x,y);
+}
+// output terminal (Q / Q̄ box)
+function qBox(x,y,label,v){
+  const W=70,H=32;
+  cx.fillStyle=v?'rgba(57,255,20,.12)':'rgba(20,40,80,.4)';
+  cx.strokeStyle=v?'#39ff14':'#1e3a5f'; cx.lineWidth=1.6;
+  cx.beginPath(); cx.roundRect(x,y-H/2,W,H,5); cx.fill(); cx.stroke();
+  lbl(x+W/2,y,label+'='+v, v?'#39ff14':'#4a6080', 13);
+}
+// grid
+function grid(){
+  cx.strokeStyle='rgba(30,58,95,.22)'; cx.lineWidth=.5;
+  const s=30;
+  for(let x=0;x<cv.width;x+=s){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,cv.height);cx.stroke();}
+  for(let y=0;y<cv.height;y+=s){cx.beginPath();cx.moveTo(0,y);cx.lineTo(cv.width,y);cx.stroke();}
+}
+
+// ═══════════════════════════════════
+// GATE DRAWING
+// Each gate function draws the gate body and returns pin positions.
+// lx,ly = left-center of gate body
+// Returns { x1,y1 (top input pin), x2,y2 (bottom input pin), ox,oy (output pin) }
+// ═══════════════════════════════════
+
+// ── NOR gate: OR body + bubble ────
+// W = body width (tip of OR to left edge), H = gate height, R = H/2
+function NOR(lx,ly,W,H,v){
+  const R=H/2, col=v?'#00d4ff':'#1e3a5f';
+  // OR shape: curved back, pointed tip
+  cx.beginPath();
+  cx.moveTo(lx, ly-R);
+  cx.quadraticCurveTo(lx+W*0.4, ly-R, lx+W, ly);
+  cx.quadraticCurveTo(lx+W*0.4, ly+R, lx, ly+R);
+  cx.quadraticCurveTo(lx+W*0.2, ly, lx, ly-R);
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  // bubble
+  const br=7;
+  cx.beginPath(); cx.arc(lx+W+br,ly,br,0,Math.PI*2);
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  // label
+  lbl(lx+W*0.5, ly, 'NOR', '#1a5a7a', 10);
+  // pin x offset from left due to curved back
+  const px=lx+W*0.12;
+  return {x1:px,y1:ly-R*0.5, x2:px,y2:ly+R*0.5, ox:lx+W+br*2,oy:ly};
+}
+
+// ── NAND gate: AND body + bubble ──
+function NAND(lx,ly,W,H,v){
+  const R=H/2, col=v?'#ff6b35':'#1e3a5f';
+  // AND shape: flat left, semicircle right
+  cx.beginPath();
+  cx.moveTo(lx,    ly-R);
+  cx.lineTo(lx+W-R,ly-R);
+  cx.arc(lx+W-R,   ly, R, -Math.PI/2, Math.PI/2);
+  cx.lineTo(lx,    ly+R);
+  cx.closePath();
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  // bubble
+  const br=7;
+  cx.beginPath(); cx.arc(lx+W+br,ly,br,0,Math.PI*2);
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  lbl(lx+W*0.45, ly, 'NAND', '#7a4a1a', 10);
+  return {x1:lx,y1:ly-R*0.45, x2:lx,y2:ly+R*0.45, ox:lx+W+br*2,oy:ly};
+}
+
+// ── AND gate (no bubble) ──
+function AND(lx,ly,W,H,v){
+  const R=H/2, col=v?'#39ff14':'#1e3a5f';
+  cx.beginPath();
+  cx.moveTo(lx,    ly-R);
+  cx.lineTo(lx+W-R,ly-R);
+  cx.arc(lx+W-R,   ly, R, -Math.PI/2, Math.PI/2);
+  cx.lineTo(lx,    ly+R);
+  cx.closePath();
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  lbl(lx+W*0.45, ly, 'AND', '#2a5a2a', 10);
+  return {x1:lx,y1:ly-R*0.45, x2:lx,y2:ly+R*0.45, ox:lx+W,oy:ly};
+}
+
+// ── NOT gate: triangle + bubble ──
+function NOT(lx,ly,W,H,v){
+  const R=H/2, col=v?'#bf5fff':'#1e3a5f', br=5;
+  cx.beginPath();
+  cx.moveTo(lx,   ly-R);
+  cx.lineTo(lx+W, ly);
+  cx.lineTo(lx,   ly+R);
+  cx.closePath();
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  cx.beginPath(); cx.arc(lx+W+br,ly,br,0,Math.PI*2);
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  lbl(lx+W*0.45, ly, 'NOT', '#5a3a8a', 9);
+  return {ix:lx,iy:ly, ox:lx+W+br*2,oy:ly};
+}
+
+// ── XOR gate ──
+function XOR(lx,ly,W,H,v){
+  const R=H/2, col=v?'#39ff14':'#1e3a5f';
+  cx.beginPath();
+  cx.moveTo(lx,ly-R);
+  cx.quadraticCurveTo(lx+W*0.4,ly-R,lx+W,ly);
+  cx.quadraticCurveTo(lx+W*0.4,ly+R,lx,ly+R);
+  cx.quadraticCurveTo(lx+W*0.2,ly,lx,ly-R);
+  cx.fillStyle=GBG; cx.strokeStyle=col; cx.lineWidth=2; cx.fill(); cx.stroke();
+  // extra arc on back
+  cx.beginPath();
+  cx.moveTo(lx-8,ly-R);
+  cx.quadraticCurveTo(lx-8+W*0.2,ly,lx-8,ly+R);
+  cx.strokeStyle=col; cx.lineWidth=2; cx.stroke();
+  lbl(lx+W*0.46, ly, 'XOR', '#1a5a4a', 10);
+  const px=lx+W*0.14;
+  return {x1:px,y1:ly-R*0.5, x2:px,y2:ly+R*0.5, ox:lx+W,oy:ly};
+}
+
+// ── D-Latch box ──
+function DLatch(lx,ly,W,H,v){
+  cx.fillStyle=GBG;
+  cx.strokeStyle=v?'#3b82f6':'#1e3a5f'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(lx,ly-H/2,W,H,7); cx.fill(); cx.stroke();
+  // internal divider
+  cx.beginPath(); cx.moveTo(lx,ly); cx.lineTo(lx+W,ly);
+  cx.strokeStyle='#1e3a5f'; cx.lineWidth=.8; cx.stroke();
+  lbl(lx+W/2,ly-H/4,'D — Latch','#bf5fff',11);
+  // CLK triangle
+  cx.beginPath(); cx.moveTo(lx,ly+8); cx.lineTo(lx+12,ly+H/4); cx.lineTo(lx,ly+H/2-8);
+  cx.strokeStyle=v?'#ffaa22':'#1e3a5f'; cx.lineWidth=1.6; cx.stroke();
+  return {
+    din:{x:lx,y:ly-H/4},
+    clk:{x:lx,y:ly+H/4},
+    qo:{x:lx+W,y:ly-H/4},
+    qbo:{x:lx+W,y:ly+H/4}
+  };
+}
+
+// ═══════════════════════════════════
+// SCHEMA FUNCTIONS
+// Each draws in a local coordinate system.
+// Canvas translates so (0,0) = centre of canvas.
+// ═══════════════════════════════════
+
+// ── 1. SR NOR ────────────────────────────────────────────────
+// Two NOR gates cross-coupled.
+// Layout:
+//   S ──────────────────[NOR P1]────── Q ──→
+//       ↑ Q̄ feedback  ↑                    ↓ Q feedback
+//   R ──────────────────[NOR P2]────── Q̄──→
+//
+function sch_SR_NOR(){
+  const S=INP.S, R=INP.R, Qb=1-Q;
+  // Gate positions: lx,ly = left-centre
+  const GW=75, GH=60;
+  const P1lx=-110, P1ly=-85;
+  const P2lx=-110, P2ly= 85;
+  const p1=NOR(P1lx,P1ly,GW,GH,Q);
+  const p2=NOR(P2lx,P2ly,GW,GH,Qb);
+  lbl(P1lx+GW/2, P1ly-GH/2-14, 'P1', '#1a5a7a', 10);
+  lbl(P2lx+GW/2, P2ly+GH/2+14, 'P2', '#1a5a7a', 10);
+
+  // Input S → P1 pin1
+  seg(-290,p1.y1, p1.x1,p1.y1, S);
+  lbl(-305,p1.y1,'S',S?'#39ff14':'#c8d6e5',16,'right');
+
+  // Input R → P2 pin2
+  seg(-290,p2.y2, p2.x1,p2.y2, R);
+  lbl(-305,p2.y2,'R',R?'#39ff14':'#c8d6e5',16,'right');
+
+  // P1 output → Q terminal
+  const Qx=p1.ox, Qt=Qx+80;
+  seg(Qx,p1.oy, Qt,p1.oy, Q);
+  qBox(Qt+4,p1.oy,'Q',Q);
+
+  // P2 output → Q̄ terminal
+  const Qbx=p2.ox, Qbt=Qbx+80;
+  seg(Qbx,p2.oy, Qbt,p2.oy, Qb);
+  qBox(Qbt+4,p2.oy,'Q̄',Qb);
+
+  // Feedback Q → P2 pin1:  tap at Qx+30, go down to y=170, left to x=-170, up to p2.y1
+  const f1x=Qx+30;
+  jdot(f1x,p1.oy,Q);
+  seg(f1x,p1.oy, f1x,170, Q);
+  seg(f1x,170, -170,170, Q);
+  seg(-170,170, -170,p2.y1, Q);
+  seg(-170,p2.y1, p2.x1,p2.y1, Q);
+
+  // Feedback Q̄ → P1 pin2:  tap at Qbx+20, go up to y=-170, left to x=-175, down to p1.y2
+  const f2x=Qbx+20;
+  jdot(f2x,p2.oy,Qb);
+  seg(f2x,p2.oy, f2x,-170, Qb);
+  seg(f2x,-170, -175,-170, Qb);
+  seg(-175,-170, -175,p1.y2, Qb);
+  seg(-175,p1.y2, p1.x1,p1.y2, Qb);
+
+  lbl(0,-195,'CBB-SR Asincron — varianta NOR','#00d4ff',13);
+  if(S&&R) lbl(0,195,'⚠  STARE INTERZISĂ — S=R=1','#e24b4a',12);
+  else { const r=DEF.SR_NOR.compute(INP,Q); lbl(0,195,r.op,r.op.includes('Set')?'#39ff14':r.op.includes('Reset')?'#ff6b35':'#4a7090',11); }
+}
+
+// ── 2. SR NAND ───────────────────────────────────────────────
+// Figura 3.6 din manual:
+//   P (top):  pin1=S̄,  pin2=Q  (feedback de jos) → ieșire Q̄
+//   Q_gate (bot): pin1=Q̄ (feedback de sus), pin2=R̄  → ieșire Q
+//
+//   S ──────────[NAND P]── Q̄ ──→
+//          Q↑  ↑Q̄ feedback  ↓Q feedback
+//   R ──────────[NAND Q]── Q  ──→
+//
+function sch_SR_NAND(){
+  const S=INP.S, R=INP.R, Qb=1-Q;
+  // NAND P (top): inputs S(pin1) + Q(pin2 feedback) → output = Q̄
+  // NAND Q (bot): inputs Q̄(pin1 feedback) + R(pin2) → output = Q
+  const GW=78, GH=60;
+  const Plx=-115, Ply=-85;   // top gate → outputs Q̄
+  const Glx=-115, Gly= 85;   // bottom gate → outputs Q
+
+  // top NAND: outputs Q̄ (active when S=0 or Q=0)
+  const pg=NAND(Plx,Ply,GW,GH,Qb);
+  lbl(Plx+GW/2, Ply-GH/2-14, 'P', '#7a4a1a', 10);
+  // bottom NAND: outputs Q
+  const gg=NAND(Glx,Gly,GW,GH,Q);
+  lbl(Glx+GW/2, Gly+GH/2+14, 'Q_g', '#7a4a1a', 10);
+
+  // S → P pin1 (top input of top gate)
+  seg(-290,pg.y1, pg.x1,pg.y1, S);
+  lbl(-305,pg.y1,'S',S?'#39ff14':'#c8d6e5',16,'right');
+
+  // R → Q_g pin2 (bottom input of bottom gate)
+  seg(-290,gg.y2, gg.x1,gg.y2, R);
+  lbl(-305,gg.y2,'R',R?'#39ff14':'#c8d6e5',16,'right');
+
+  // P output = Q̄  →  terminal
+  const Qbt=pg.ox+80;
+  seg(pg.ox,pg.oy, Qbt,pg.oy, Qb);
+  qBox(Qbt+4,pg.oy,'Q̄',Qb);
+
+  // Q_g output = Q  → terminal
+  const Qt=gg.ox+80;
+  seg(gg.ox,gg.oy, Qt,gg.oy, Q);
+  qBox(Qt+4,gg.oy,'Q',Q);
+
+  // Cross-feedback 1: Q (from Q_g output) → P pin2 (bottom input of top gate)
+  // route: tap on Q wire at x=gg.ox+30, go up to y=-170, go left to x=-175, down to P.y2
+  const fQx=gg.ox+30;
+  jdot(fQx,gg.oy,Q);
+  seg(fQx,gg.oy,  fQx,-170,  Q);
+  seg(fQx,-170,  -175,-170,  Q);
+  seg(-175,-170, -175,pg.y2, Q);
+  seg(-175,pg.y2, pg.x1,pg.y2, Q);
+
+  // Cross-feedback 2: Q̄ (from P output) → Q_g pin1 (top input of bottom gate)
+  // route: tap on Q̄ wire at x=pg.ox+20, go down to y=170, go left to x=-180, up to Q_g.y1
+  const fQbx=pg.ox+20;
+  jdot(fQbx,pg.oy,Qb);
+  seg(fQbx,pg.oy,  fQbx,170,  Qb);
+  seg(fQbx,170,  -180,170,    Qb);
+  seg(-180,170,  -180,gg.y1,  Qb);
+  seg(-180,gg.y1, gg.x1,gg.y1, Qb);
+
+  lbl(0,-195,'CBB-SR Asincron — varianta NAND  (fig. 3.6)','#ff6b35',13);
+  lbl(0,-178,'P→Q̄,  Q_gate→Q  |  Interzis: S=R=1 → Q=Q̄=1','#4a5568',9);
+  if(S&&R) lbl(0,195,'⚠  STARE INTERZISĂ — S=R=1  (Q=Q̄=1)','#e24b4a',12);
+  else { const r=DEF.SR_NAND.compute(INP,Q); lbl(0,195,r.op,r.op.includes('Set')?'#39ff14':r.op.includes('Reset')?'#ff6b35':'#4a7090',11); }
+}
+
+// ── 3. SR SYNC ───────────────────────────────────────────────
+// Figura 3.8/3.9: SR asincron NAND + 2 NAND de validare CLK
+//
+//  S  ──[NAND P3]── s̄ ──[NAND P1]── Q̄ (miez)
+//  CLK ─────────────┘          ↑↓ cross
+//  CLK ─────────────┐          └──[NAND P2]── Q (miez)
+//  R  ──[NAND P4]── r̄ ─────────────────────────
+//
+// Atenție: P3 → P1 pin1, P4 → P2 pin2
+// Cross-coupling identic cu SR NAND: P1 out=Q̄ → P2 pin1; P2 out=Q → P1 pin2
+//
+function sch_SR_SYNC(){
+  const S=INP.S, R=INP.R, CLK=INP.CLK, Qb=1-Q;
+  // effective signals after validation
+  // NAND(S,CLK)=0 only when S=1 AND CLK=1 → that's the active-low S̄_eff
+  // for latch: when CLK=0, P3 output=1 always (blocked), latch memorizes
+  // when CLK=1, P3 output = NAND(S,1) = NOT(S) = S̄_eff
+  const P3out = CLK ? (S?0:1) : 1;   // NAND(S,CLK)
+  const P4out = CLK ? (R?0:1) : 1;   // NAND(R,CLK)
+  // latch memory: P1=NAND(P3out, P2out=Q); P2=NAND(P1out=Qb, P4out)
+  // P1 output = Q̄, P2 output = Q (same as SR NAND topology)
+  const GW=68, GH=48;
+
+  // Validation gates P3, P4
+  const P3lx=-230, P3ly=-85;
+  const P4lx=-230, P4ly= 85;
+  const p3=NAND(P3lx,P3ly,GW,GH,P3out===0?1:0);
+  const p4=NAND(P4lx,P4ly,GW,GH,P4out===0?1:0);
+  lbl(P3lx+GW/2, P3ly-GH/2-13, 'P3', '#3b82f6', 10);
+  lbl(P4lx+GW/2, P4ly+GH/2+13, 'P4', '#3b82f6', 10);
+
+  // Memory gates P1 (top→Q̄), P2 (bottom→Q)
+  const P1lx=-35, P1ly=-85;
+  const P2lx=-35, P2ly= 85;
+  const p1=NAND(P1lx,P1ly,GW,GH,Qb);   // P1 → Q̄
+  const p2=NAND(P2lx,P2ly,GW,GH,Q);    // P2 → Q
+  lbl(P1lx+GW/2, P1ly-GH/2-13, 'P1', '#00d4ff', 10);
+  lbl(P2lx+GW/2, P2ly+GH/2+13, 'P2', '#00d4ff', 10);
+
+  // S → P3 pin1
+  seg(-350,p3.y1, p3.x1,p3.y1, S);
+  lbl(-365,p3.y1,'S',S?'#39ff14':'#c8d6e5',15,'right');
+  // R → P4 pin2
+  seg(-350,p4.y2, p4.x1,p4.y2, R);
+  lbl(-365,p4.y2,'R',R?'#39ff14':'#c8d6e5',15,'right');
+
+  // CLK → P3 pin2 and P4 pin1
+  const CLKx=-350, CLKy=0;
+  lbl(CLKx-12,CLKy,'CLK',CLK?'#ffaa22':'#c8d6e5',11,'right');
+  segD(CLKx,CLKy, CLKx,p3.y2, CLK);
+  segD(CLKx,p3.y2, p3.x1,p3.y2, CLK);
+  segD(CLKx,CLKy, CLKx,p4.y1, CLK);
+  segD(CLKx,p4.y1, p4.x1,p4.y1, CLK);
+  jdot(CLKx,CLKy,CLK);
+
+  // P3 out → P1 pin1 (orthogonal: right then up to pin1 level)
+  seg(p3.ox,p3.oy, p3.ox+20,p3.oy, P3out===0?1:0);
+  seg(p3.ox+20,p3.oy, p3.ox+20,p1.y1, P3out===0?1:0);
+  seg(p3.ox+20,p1.y1, P1lx,p1.y1, P3out===0?1:0);
+
+  // P4 out → P2 pin2 (orthogonal: right then down to pin2 level)
+  seg(p4.ox,p4.oy, p4.ox+20,p4.oy, P4out===0?1:0);
+  seg(p4.ox+20,p4.oy, p4.ox+20,p2.y2, P4out===0?1:0);
+  seg(p4.ox+20,p2.y2, P2lx,p2.y2, P4out===0?1:0);
+
+  // P1 output = Q̄
+  const Qbt=p1.ox+90;
+  seg(p1.ox,p1.oy, Qbt,p1.oy, Qb);
+  qBox(Qbt+4,p1.oy,'Q̄',Qb);
+
+  // P2 output = Q
+  const Qt=p2.ox+90;
+  seg(p2.ox,p2.oy, Qt,p2.oy, Q);
+  qBox(Qt+4,p2.oy,'Q',Q);
+
+  // Cross-coupling (same as SR NAND):
+  // Q (from P2) → P1 pin2
+  const fQx=p2.ox+30; jdot(fQx,p2.oy,Q);
+  seg(fQx,p2.oy, fQx,-170, Q);
+  seg(fQx,-170, -10,-170, Q);
+  seg(-10,-170, -10,p1.y2, Q);
+  seg(-10,p1.y2, P1lx,p1.y2, Q);
+
+  // Q̄ (from P1) → P2 pin1
+  const fQbx=p1.ox+20; jdot(fQbx,p1.oy,Qb);
+  seg(fQbx,p1.oy, fQbx,170, Qb);
+  seg(fQbx,170, -15,170, Qb);
+  seg(-15,170, -15,p2.y1, Qb);
+  seg(-15,p2.y1, P2lx,p2.y1, Qb);
+
+  lbl(0,-205,'CBB-SR Sincron — NAND de validare (P3,P4) + miez SR-NAND (P1,P2)  (fig. 3.9)','#00d4ff',13);
+  const r=DEF.SR_SYNC.compute(INP,Q);
+  lbl(0,200,r.op,r.op.includes('INTERZIS')?'#e24b4a':CLK?'#00d4ff':'#4a6080',11);
+}
+
+// ── 4. D SYNC ────────────────────────────────────────────────
+// SR Sync + NOT on input: R = NOT(D), so forbidden state impossible.
+//
+//  D ──┬─────────────────────── P3 ──┐
+//       └── NOT ── D̄ ─────── P4 ──┤  NAND latch
+//  CLK ────────────────────── P3,P4  P1,P2 → Q, Q̄
+//
+function sch_D_SYNC(){
+  const D=INP.D, CLK=INP.CLK, Db=1-D, Qb=1-Q;
+  const GW=70, GH=50;
+
+  // NOT gate for D̄
+  const NOTlx=-255, NOTly=78;
+  const nt=NOT(NOTlx,NOTly,36,24,Db);
+  lbl(NOTlx+18, NOTly+20, 'NOT', '#5a3a8a', 9);
+
+  // D input wire, junction splits to NOT and up to P3 pin1
+  const Din=-340;
+  seg(Din,NOTly, nt.ix,NOTly, D);
+  lbl(Din-12,NOTly,'D',D?'#39ff14':'#c8d6e5',15,'right');
+  jdot(Din+20,NOTly,D);
+  seg(Din+20,NOTly, Din+20,p3y1(), D); // vertical stub up
+
+  // CLK
+  lbl(Din-12,-5,'CLK',CLK?'#ffaa22':'#c8d6e5',11,'right');
+
+  // Validation gates P3=NAND(D,CLK), P4=NAND(D̄,CLK)
+  const P3lx=-170, P3ly=-80;
+  const P4lx=-170, P4ly= 78;
+  const p3=NAND(P3lx,P3ly,GW,GH,D&CLK);
+  const p4=NAND(P4lx,P4ly,GW,GH,Db&CLK);
+  lbl(P3lx+GW/2, P3ly-GH/2-13, 'P3', '#3b82f6', 10);
+  lbl(P4lx+GW/2, P4ly+GH/2+13, 'P4', '#3b82f6', 10);
+
+  // D → P3 pin1 (vertical from junction)
+  seg(Din+20,NOTly, Din+20,p3.y1, D);
+  seg(Din+20,p3.y1, P3lx,p3.y1, D);
+  // CLK → P3 pin2
+  segD(Din,-5, Din,p3.y2, CLK); segD(Din,p3.y2, P3lx,p3.y2, CLK);
+  jdot(Din,-5,CLK);
+  // D̄ → P4 pin2
+  seg(nt.ox,NOTly, P4lx,p4.y2, Db);
+  // CLK → P4 pin1
+  segD(Din,-5, Din,p4.y1, CLK); segD(Din,p4.y1, P4lx,p4.y1, CLK);
+
+  // Memory P1, P2
+  const P1lx=-10, P1ly=-80;
+  const P2lx=-10, P2ly= 78;
+  const p1=NAND(P1lx,P1ly,GW,GH,Q);
+  const p2=NAND(P2lx,P2ly,GW,GH,Qb);
+  lbl(P1lx+GW/2, P1ly-GH/2-13, 'P1', '#00d4ff', 10);
+  lbl(P2lx+GW/2, P2ly+GH/2+13, 'P2', '#00d4ff', 10);
+
+  seg(p3.ox,p3.oy, P1lx,p1.y1, D&CLK?1:0);
+  seg(p4.ox,p4.oy, P2lx,p2.y2, Db&CLK?1:0);
+
+  const Qt=p1.ox+80, Qbt=p2.ox+80;
+  seg(p1.ox,p1.oy, Qt,p1.oy, Q); qBox(Qt+4,p1.oy,'Q',Q);
+  seg(p2.ox,p2.oy, Qbt,p2.oy, Qb); qBox(Qbt+4,p2.oy,'Q̄',Qb);
+
+  const f1x=p1.ox+30; jdot(f1x,p1.oy,Q);
+  seg(f1x,p1.oy, f1x,155, Q); seg(f1x,155, 0,155, Q);
+  seg(0,155, 0,p2.y1, Q); seg(0,p2.y1, P2lx,p2.y1, Q);
+
+  const f2x=p2.ox+20; jdot(f2x,p2.oy,Qb);
+  seg(f2x,p2.oy, f2x,-155, Qb); seg(f2x,-155, -5,-155, Qb);
+  seg(-5,-155, -5,p1.y2, Qb); seg(-5,p1.y2, P1lx,p1.y2, Qb);
+
+  lbl(0,-200,'CBB-D Sincron (Latch) — SR-NAND + NOT pe intrare D','#bf5fff',13);
+  lbl(0,200,CLK?`CLK=1 → Qn+1=D=${D}`:'CLK=0 → date blocate', CLK?'#bf5fff':'#4a6080',11);
+}
+function p3y1(){return -80-50*0.45;} // helper for D_SYNC
+
+// ── 5. T SYNC ────────────────────────────────────────────────
+// XOR gate + full D-Latch drawn as 4 NAND gates (same as D_SYNC)
+//
+//            ┌─[NAND P3(D·CLK)]──┐
+//  T─[XOR]──D┤                    ├─[NAND P1]── Q
+//  Q─(feedback)                   │      ↑↓ cross-coupling
+//  D̄─[NOT]──┤                    └─[NAND P2]── Q̄
+//            └─[NAND P4(D̄·CLK)]─┘
+//  CLK ──────────────────────────────────────────
+//
+function sch_T_SYNC(){
+  const T=INP.T, CLK=INP.CLK, DIN=T^Q, Qb=1-Q;
+  const GW=65, GH=48;
+
+  lbl(0,-235,'CBB-T Sincron — XOR + D-Latch (4× NAND) cu reacție Q→XOR','#39ff14',13);
+
+  // ── XOR gate ──────────────────────────────
+  const XGW=62, XGH=50;
+  const Xlx=-345, Xly=0;
+  const xg=XOR(Xlx,Xly,XGW,XGH,DIN);
+
+  // T → XOR pin1
+  seg(-445,xg.y1, xg.x1,xg.y1, T);
+  lbl(-460,xg.y1,'T',T?'#39ff14':'#c8d6e5',15,'right');
+  // Q feedback → XOR pin2 (comes from far right, routed under)
+
+  // ── NOT gate for D̄ ─────────────────────
+  const NOTlx=-255, NOTly=72;
+  const nt=NOT(NOTlx,NOTly,34,22,1-DIN);
+
+  // XOR output = D_in → splits: up to P3 pin1, and down to NOT
+  const D_jx=-265, D_jy=0;
+  seg(xg.ox, xg.oy, D_jx, D_jy, DIN);         // XOR out → junction
+  jdot(D_jx, D_jy, DIN);
+  seg(D_jx, D_jy, D_jx, NOTly, DIN);           // junction → NOT input
+  seg(D_jx, NOTly, nt.ix, NOTly, DIN);
+
+  // ── CLK position ──────────────────────
+  const CLKx=-445, CLKy=50;
+  lbl(CLKx-12, CLKy,'CLK', CLK?'#ffaa22':'#c8d6e5', 11,'right');
+
+  // ── NAND P3 = NAND(D, CLK) ────────────
+  const P3lx=-185, P3ly=-80;
+  const p3=NAND(P3lx,P3ly,GW,GH,DIN&CLK);
+  lbl(P3lx+GW/2, P3ly-GH/2-13,'P3','#3b82f6',10);
+
+  // D → P3 pin1: from junction go up
+  seg(D_jx, D_jy,   D_jx, p3.y1, DIN);
+  seg(D_jx, p3.y1,  P3lx, p3.y1, DIN);
+  // CLK → P3 pin2
+  segD(CLKx, CLKy, CLKx, p3.y2, CLK);
+  segD(CLKx, p3.y2, P3lx, p3.y2, CLK);
+  jdot(CLKx, CLKy, CLK);
+
+  // ── NAND P4 = NAND(D̄, CLK) ───────────
+  const P4lx=-185, P4ly=72;
+  const p4=NAND(P4lx,P4ly,GW,GH,(1-DIN)&CLK);
+  lbl(P4lx+GW/2, P4ly+GH/2+13,'P4','#3b82f6',10);
+
+  // D̄ → P4 pin2
+  seg(nt.ox, NOTly, P4lx, p4.y2, 1-DIN);
+  // CLK → P4 pin1
+  segD(CLKx, CLKy, CLKx, p4.y1, CLK);
+  segD(CLKx, p4.y1, P4lx, p4.y1, CLK);
+
+  // ── NAND P1 (memory top) ──────────────
+  const P1lx=-45, P1ly=-80;
+  const p1=NAND(P1lx,P1ly,GW,GH,Q);
+  lbl(P1lx+GW/2, P1ly-GH/2-13,'P1','#00d4ff',10);
+
+  // ── NAND P2 (memory bottom) ───────────
+  const P2lx=-45, P2ly=72;
+  const p2=NAND(P2lx,P2ly,GW,GH,Qb);
+  lbl(P2lx+GW/2, P2ly+GH/2+13,'P2','#00d4ff',10);
+
+  // P3 → P1 pin1
+  seg(p3.ox, p3.oy, P1lx, p1.y1, DIN&CLK?1:0);
+  // P4 → P2 pin2
+  seg(p4.ox, p4.oy, P2lx, p2.y2, (1-DIN)&CLK?1:0);
+
+  // ── Outputs Q, Q̄ ──────────────────────
+  const Qt=p1.ox+90, Qbt=p2.ox+90;
+  seg(p1.ox, p1.oy, Qt, p1.oy, Q); qBox(Qt+4, p1.oy,'Q',Q);
+  seg(p2.ox, p2.oy, Qbt, p2.oy, Qb); qBox(Qbt+4, p2.oy,'Q̄',Qb);
+
+  // ── Latch cross-coupling Q→P2 pin1 ────
+  const f1x=p1.ox+32; jdot(f1x, p1.oy, Q);
+  seg(f1x, p1.oy, f1x, 155, Q);
+  seg(f1x, 155, -25, 155, Q);
+  seg(-25, 155, -25, p2.y1, Q);
+  seg(-25, p2.y1, P2lx, p2.y1, Q);
+
+  // ── Latch cross-coupling Q̄→P1 pin2 ───
+  const f2x=p2.ox+22; jdot(f2x, p2.oy, Qb);
+  seg(f2x, p2.oy, f2x, -155, Qb);
+  seg(f2x, -155, -30, -155, Qb);
+  seg(-30, -155, -30, p1.y2, Qb);
+  seg(-30, p1.y2, P1lx, p1.y2, Qb);
+
+  // ── Feedback Q → XOR pin2 (big loop under everything) ──
+  const fbx=Qt-15; jdot(fbx, p1.oy, Q);
+  seg(fbx, p1.oy, fbx, 200, Q);       // down
+  seg(fbx, 200, -430, 200, Q);         // far left
+  seg(-430, 200, -430, xg.y2, Q);      // up to XOR pin2 level
+  seg(-430, xg.y2, xg.x1, xg.y2, Q);  // into XOR pin2
+  lbl(-438, 185,'Q', Q?'#39ff14':'#4a6080',9,'right');
+
+  const r=DEF.T_SYNC.compute(INP,Q);
+  lbl(0,225,r.op,r.op.includes('Toggle')?'#bf5fff':CLK?'#39ff14':'#4a6080',11);
+}
+
+// ── 6. JK ASYNC ──────────────────────────────────────────────
+// SR NOR + AND gates: S=J·Q̄, R=K·Q
+//
+//  J ──[AND]── S ──[NOR P1]── Q
+//  Q̄ ──┘                         ↓ Q feedback
+//  Q ──┐                     [NOR P2]── Q̄
+//  K ──[AND]── R ──────────────┘
+//
+function sch_JK_ASYNC(){
+  const J=INP.J, K=INP.K, Qb=1-Q;
+  const Sn=J&Qb, Rn=K&Q;
+  const AGW=65, AGH=50, NGW=75, NGH=60;
+
+  // AND gate for S=J·Q̄
+  const ASlx=-220, ASly=-90;
+  const as=AND(ASlx,ASly,AGW,AGH,Sn);
+  lbl(ASlx+AGW/2,ASly-AGH/2-13,'AND','#3a5a2a',9);
+  lbl(ASlx+AGW/2,ASly+AGH/2+11,'S=J·Q̄','#2a4a20',8);
+
+  // AND gate for R=K·Q
+  const ARlx=-220, ARly= 90;
+  const ar=AND(ARlx,ARly,AGW,AGH,Rn);
+  lbl(ARlx+AGW/2,ARly+AGH/2+13,'AND','#3a5a2a',9);
+  lbl(ARlx+AGW/2,ARly-AGH/2-13,'R=K·Q','#2a4a20',8);
+
+  // NOR latch P1, P2
+  const P1lx=-30, P1ly=-90;
+  const P2lx=-30, P2ly= 90;
+  const p1=NOR(P1lx,P1ly,NGW,NGH,Q);
+  const p2=NOR(P2lx,P2ly,NGW,NGH,Qb);
+  lbl(P1lx+NGW/2,P1ly-NGH/2-13,'NOR P1','#1a5a7a',9);
+  lbl(P2lx+NGW/2,P2ly+NGH/2+13,'NOR P2','#1a5a7a',9);
+
+  // J → AND_S pin1
+  seg(-340,as.y1, as.x1,as.y1, J);
+  lbl(-355,as.y1,'J',J?'#39ff14':'#c8d6e5',15,'right');
+  // K → AND_R pin2
+  seg(-340,ar.y2, ar.x1,ar.y2, K);
+  lbl(-355,ar.y2,'K',K?'#39ff14':'#c8d6e5',15,'right');
+
+  // AND_S → NOR P1 pin1
+  seg(as.ox,as.oy, p1.x1,p1.y1, Sn);
+  // AND_R → NOR P2 pin2
+  seg(ar.ox,ar.oy, p2.x1,p2.y2, Rn);
+
+  // Outputs
+  const Qt=p1.ox+80, Qbt=p2.ox+80;
+  seg(p1.ox,p1.oy, Qt,p1.oy, Q); qBox(Qt+4,p1.oy,'Q',Q);
+  seg(p2.ox,p2.oy, Qbt,p2.oy, Qb); qBox(Qbt+4,p2.oy,'Q̄',Qb);
+
+  // NOR latch cross-coupling Q→P2 pin1
+  const f1x=p1.ox+30; jdot(f1x,p1.oy,Q);
+  seg(f1x,p1.oy, f1x,160, Q);
+  seg(f1x,160, 0,160, Q);
+  seg(0,160, 0,p2.y1, Q);
+  seg(0,p2.y1, p2.x1,p2.y1, Q);
+
+  // Q̄ → P1 pin2
+  const f2x=p2.ox+20; jdot(f2x,p2.oy,Qb);
+  seg(f2x,p2.oy, f2x,-160, Qb);
+  seg(f2x,-160, -5,-160, Qb);
+  seg(-5,-160, -5,p1.y2, Qb);
+  seg(-5,p1.y2, p1.x1,p1.y2, Qb);
+
+  // JK feedback: Q̄→AND_S pin2 (from NOR P2 output, loop around bottom)
+  const fbQbx=Qbt-15; jdot(fbQbx,p2.oy,Qb);
+  seg(fbQbx,p2.oy, fbQbx,195, Qb);
+  seg(fbQbx,195, -285,195, Qb);
+  seg(-285,195, -285,as.y2, Qb);
+  seg(-285,as.y2, as.x1,as.y2, Qb);
+  lbl(-292,as.y2,'Q̄',Qb?'#39ff14':'#4a6080',9,'right');
+
+  // JK feedback: Q→AND_R pin1 (from NOR P1 output, loop around top)
+  const fbQx=Qt-20; jdot(fbQx,p1.oy,Q);
+  seg(fbQx,p1.oy, fbQx,-200, Q);
+  seg(fbQx,-200, -290,-200, Q);
+  seg(-290,-200, -290,ar.y1, Q);
+  seg(-290,ar.y1, ar.x1,ar.y1, Q);
+  lbl(-297,ar.y1,'Q',Q?'#39ff14':'#4a6080',9,'right');
+
+  lbl(0,-215,'CBB-JK Asincron — SR NOR cu AND: S=J·Q̄, R=K·Q','#ff6b35',13);
+  const r=DEF.JK_ASYNC.compute(INP,Q);
+  lbl(0,215,r.op,r.op.includes('Toggle')?'#bf5fff':r.op.includes('Set')?'#39ff14':r.op.includes('Reset')?'#ff6b35':'#4a7090',12);
+}
+
+// ── 7. JK SYNC ───────────────────────────────────────────────
+// JK Async + CLK validation (AND gates with CLK).
+// S_eff = J · Q̄ · CLK  (two cascaded ANDs)
+// R_eff = K · Q  · CLK
+//
+function sch_JK_SYNC(){
+  const J=INP.J, K=INP.K, CLK=INP.CLK, Qb=1-Q;
+  const Sn=J&Qb&CLK, Rn=K&Q&CLK;
+  const AGW=62, AGH=46, NGW=72, NGH=58;
+
+  // Stage-1 AND: J·Q̄ (top)
+  const A1lx=-285, A1ly=-100;
+  const a1=AND(A1lx,A1ly,AGW,AGH,J&Qb);
+  lbl(A1lx+AGW/2,A1ly-AGH/2-12,'AND','#3a5a2a',9);
+
+  // Stage-2 AND: (J·Q̄)·CLK = S_eff (top)
+  const A2lx=-190, A2ly=-100;
+  const a2=AND(A2lx,A2ly,AGW,AGH,Sn);
+  lbl(A2lx+AGW/2,A2ly-AGH/2-12,'AND','#3a5a2a',9);
+  lbl(A2lx+AGW/2,A2ly+AGH/2+11,'S_eff','#2a6a40',8);
+
+  // Stage-1 AND: K·Q (bottom)
+  const A3lx=-285, A3ly=100;
+  const a3=AND(A3lx,A3ly,AGW,AGH,K&Q);
+  lbl(A3lx+AGW/2,A3ly+AGH/2+12,'AND','#3a5a2a',9);
+
+  // Stage-2 AND: (K·Q)·CLK = R_eff (bottom)
+  const A4lx=-190, A4ly=100;
+  const a4=AND(A4lx,A4ly,AGW,AGH,Rn);
+  lbl(A4lx+AGW/2,A4ly+AGH/2+12,'AND','#3a5a2a',9);
+  lbl(A4lx+AGW/2,A4ly-AGH/2-13,'R_eff','#6a2a2a',8);
+
+  // NOR latch P1, P2
+  const P1lx=-10, P1ly=-100;
+  const P2lx=-10, P2ly= 100;
+  const p1=NOR(P1lx,P1ly,NGW,NGH,Q);
+  const p2=NOR(P2lx,P2ly,NGW,NGH,Qb);
+  lbl(P1lx+NGW/2,P1ly-NGH/2-12,'NOR P1','#1a5a7a',9);
+  lbl(P2lx+NGW/2,P2ly+NGH/2+12,'NOR P2','#1a5a7a',9);
+
+  // Inputs J, K
+  seg(-380,a1.y1, a1.x1,a1.y1, J);
+  lbl(-395,a1.y1,'J',J?'#39ff14':'#c8d6e5',15,'right');
+  seg(-380,a3.y2, a3.x1,a3.y2, K);
+  lbl(-395,a3.y2,'K',K?'#39ff14':'#c8d6e5',15,'right');
+
+  // CLK → A2 pin2 and A4 pin2
+  lbl(-395,0,'CLK',CLK?'#ffaa22':'#c8d6e5',11,'right');
+  segD(-380,0, -380,a2.y2, CLK); segD(-380,a2.y2, A2lx,a2.y2, CLK);
+  segD(-380,0, -380,a4.y1, CLK); segD(-380,a4.y1, A4lx,a4.y1, CLK);
+  jdot(-380,0,CLK);
+
+  // Stage chain
+  seg(a1.ox,a1.oy, A2lx,a2.y1, J&Qb?1:0);
+  seg(a3.ox,a3.oy, A4lx,a4.y2, K&Q?1:0);
+
+  // AND_eff → NOR
+  seg(a2.ox,a2.oy, P1lx,p1.y1, Sn);
+  seg(a4.ox,a4.oy, P2lx,p2.y2, Rn);
+
+  // Outputs
+  const Qt=p1.ox+80, Qbt=p2.ox+80;
+  seg(p1.ox,p1.oy, Qt,p1.oy, Q); qBox(Qt+4,p1.oy,'Q',Q);
+  seg(p2.ox,p2.oy, Qbt,p2.oy, Qb); qBox(Qbt+4,p2.oy,'Q̄',Qb);
+
+  // NOR cross-coupling
+  const f1x=p1.ox+30; jdot(f1x,p1.oy,Q);
+  seg(f1x,p1.oy, f1x,168, Q); seg(f1x,168, 0,168, Q);
+  seg(0,168, 0,p2.y1, Q); seg(0,p2.y1, p2.x1,p2.y1, Q);
+
+  const f2x=p2.ox+20; jdot(f2x,p2.oy,Qb);
+  seg(f2x,p2.oy, f2x,-168, Qb); seg(f2x,-168, -5,-168, Qb);
+  seg(-5,-168, -5,p1.y2, Qb); seg(-5,p1.y2, p1.x1,p1.y2, Qb);
+
+  // JK feedback: Q̄ → A1 pin2
+  const fbQbx=Qbt-15; jdot(fbQbx,p2.oy,Qb);
+  seg(fbQbx,p2.oy, fbQbx,205, Qb);
+  seg(fbQbx,205, -320,205, Qb);
+  seg(-320,205, -320,a1.y2, Qb);
+  seg(-320,a1.y2, a1.x1,a1.y2, Qb);
+  lbl(-328,a1.y2,'Q̄',Qb?'#39ff14':'#4a6080',9,'right');
+
+  // JK feedback: Q → A3 pin1
+  const fbQx=Qt-20; jdot(fbQx,p1.oy,Q);
+  seg(fbQx,p1.oy, fbQx,-210, Q);
+  seg(fbQx,-210, -325,-210, Q);
+  seg(-325,-210, -325,a3.y1, Q);
+  seg(-325,a3.y1, a3.x1,a3.y1, Q);
+  lbl(-333,a3.y1,'Q',Q?'#39ff14':'#4a6080',9,'right');
+
+  lbl(0,-225,'CBB-JK Sincron — AND(J,Q̄,CLK) + AND(K,Q,CLK) + NOR latch','#ff6b35',13);
+  const r=DEF.JK_SYNC.compute(INP,Q);
+  lbl(0,225,r.op,r.op.includes('Toggle')?'#bf5fff':CLK?(r.op.includes('Set')?'#39ff14':r.op.includes('Reset')?'#ff6b35':'#00d4ff'):'#4a6080',12);
+}
+
+// ═══════════════════════════════════
+// DATA DEFINITIONS
+// ═══════════════════════════════════
+const DEF={
+  SR_NOR:{
+    name:'SR Asincron — NOR', ins:['S','R'], init:{S:0,R:0},
+    compute(p,q){
+      if(p.S&&p.R)return{q1:'x',op:'⚠ INTERZIS: S=R=1'};
+      if(!p.S&&!p.R)return{q1:q,op:'Memorare'};
+      if(p.S)return{q1:1,op:'Set → Q=1'};
+      return{q1:0,op:'Reset → Q=0'};
+    },
+    truth:[{i:{S:0,R:0},q1:'Qn',op:'Memorare'},{i:{S:0,R:1},q1:0,op:'Reset'},{i:{S:1,R:0},q1:1,op:'Set'},{i:{S:1,R:1},q1:'x',op:'INTERZIS'}],
+    eq:'Qn+1 = Sn + R̄n·Qn',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= S + <span style="text-decoration:overline;color:#ff6b35">R</span>·Q</span></div><div class="er"><span class="es">P1 (NOR)</span><span>= NOR(S, Q̄) → Q</span></div><div class="er"><span class="es">P2 (NOR)</span><span>= NOR(R, Q) → Q̄</span></div><div class="er"><span class="es">Interzis</span><span style="color:#e24b4a">S=R=1 → Q=Q̄=0</span></div>`,
+    info:`<h3 style="color:var(--ac);margin-bottom:8px">SR Asincron — NOR</h3><p>Două porți <b>NOR</b> cu reacție încrucișată. Q și Q̄ sunt complementare în funcționare normală.</p><br><p>S=R=1 forțează ambele ieșiri la 0 → stare interzisă. La tranziția 11→00 starea finală este imprevizibilă (race condition).</p>`
+  },
+  SR_NAND:{
+    name:'SR Asincron — NAND', ins:['S','R'], init:{S:0,R:0},
+    compute(p,q){
+      if(p.S&&p.R)return{q1:'x',op:'⚠ INTERZIS: S=R=1'};
+      if(!p.S&&!p.R)return{q1:q,op:'Memorare'};
+      if(p.S)return{q1:1,op:'Set → Q=1'};
+      return{q1:0,op:'Reset → Q=0'};
+    },
+    truth:[{i:{S:0,R:0},q1:'Qn',op:'Memorare'},{i:{S:0,R:1},q1:0,op:'Reset'},{i:{S:1,R:0},q1:1,op:'Set'},{i:{S:1,R:1},q1:'x',op:'INTERZIS'}],
+    eq:'Qn+1 = Sn + R̄n·Qn  (echivalent NOR)',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= S + <span style="text-decoration:overline;color:#ff6b35">R</span>·Q</span></div><div class="er"><span class="es">P1 (NAND)</span><span>= NAND(S, Q̄) → Q</span></div><div class="er"><span class="es">P2 (NAND)</span><span>= NAND(R, Q) → Q̄</span></div><div class="er"><span class="es">Interzis</span><span style="color:#e24b4a">S=R=1 → Q=Q̄=1</span></div>`,
+    info:`<h3 style="color:var(--ac2);margin-bottom:8px">SR Asincron — NAND</h3><p>Două porți <b>NAND</b> cu reacție încrucișată. Ecuația e identică cu NOR. La S=R=1 → Q=Q̄=1 (interzis).</p>`
+  },
+  SR_SYNC:{
+    name:'SR Sincron', ins:['S','R','CLK'], init:{S:0,R:0,CLK:0},
+    compute(p,q){
+      if(!p.CLK)return{q1:q,op:'CLK=0 → Circuit blocat'};
+      if(p.S&&p.R)return{q1:'x',op:'⚠ INTERZIS la CLK=1'};
+      if(!p.S&&!p.R)return{q1:q,op:'Memorare'};
+      if(p.S)return{q1:1,op:'Set → Q=1'};
+      return{q1:0,op:'Reset → Q=0'};
+    },
+    truth:[{i:{CLK:0,S:'×',R:'×'},q1:'Qn',op:'Blocat'},{i:{CLK:1,S:0,R:0},q1:'Qn',op:'Memorare'},{i:{CLK:1,S:0,R:1},q1:0,op:'Reset'},{i:{CLK:1,S:1,R:0},q1:1,op:'Set'},{i:{CLK:1,S:1,R:1},q1:'x',op:'INTERZIS'}],
+    eq:'Qn+1 = Sn + R̄n·Qn  (la CLK=1)',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= S + <span style="text-decoration:overline;color:#ff6b35">R</span>·Q  (la CLK=1)</span></div><div class="er"><span class="es">CLK=0</span><span style="color:var(--mu)">Circuit blocat — Qn+1=Qn</span></div><div class="er"><span class="es">P3</span><span>= NAND(S, CLK) — validare S</span></div><div class="er"><span class="es">P4</span><span>= NAND(R, CLK) — validare R</span></div>`,
+    info:`<h3 style="color:var(--ac);margin-bottom:8px">SR Sincron</h3><p>SR asincron NAND + 2 porți <b>NAND de validare</b> (P3, P4) controlate de CLK. CLK=0 → porțile P3,P4 blochează intrările. CLK=1 → S și R ajung la miezul SR.</p>`
+  },
+  D_SYNC:{
+    name:'D Sincron — Latch', ins:['D','CLK'], init:{D:0,CLK:0},
+    compute(p,q){if(!p.CLK)return{q1:q,op:'CLK=0 → Blocare date'};return{q1:p.D,op:`CLK=1 → Qn+1=D=${p.D}`};},
+    truth:[{i:{CLK:0,D:'×'},q1:'Qn',op:'Blocat'},{i:{CLK:1,D:0},q1:0,op:'Memorează D=0'},{i:{CLK:1,D:1},q1:1,op:'Memorează D=1'}],
+    eq:'Qn+1 = Dn  (la CLK activ)',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#bf5fff">= Dn  (la CLK=1)</span></div><div class="er"><span class="es">Sn</span><span>= CLK·Dn</span></div><div class="er"><span class="es">Rn</span><span>= CLK·<span style="text-decoration:overline">Dn</span></span></div><div class="er"><span class="es">D=DELAY</span><span style="color:var(--mu)">R=NOT(D) → stare interzisă imposibilă</span></div>`,
+    info:`<h3 style="color:var(--ac4);margin-bottom:8px">D Sincron — Latch</h3><p>D = <b>Delay</b>. SR Sincron + NOT pe intrare: R=NOT(D) → S·R=0 mereu → fără stare interzisă. CLK=0: blocat. CLK=1: Qn+1=D.</p>`
+  },
+  T_SYNC:{
+    name:'T Sincron', ins:['T','CLK'], init:{T:0,CLK:0},
+    compute(p,q){if(!p.CLK)return{q1:q,op:'CLK=0 → Blocat'};if(!p.T)return{q1:q,op:'T=0 → Memorare'};return{q1:1-q,op:`Toggle! ${q}→${1-q}`};},
+    truth:[{i:{CLK:'↑',T:0},q1:'Qn',op:'Memorare'},{i:{CLK:'↑',T:1},q1:'Q̄n',op:'Toggle'}],
+    eq:'Qn+1 = Qn ⊕ Tn',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= Qn ⊕ Tn</span></div><div class="er"><span class="es">D intern</span><span>= T ⊕ Q  (XOR)</span></div><div class="er"><span class="es">T=0</span><span>Memorare</span></div><div class="er"><span class="es">T=1</span><span style="color:#bf5fff">Toggle: Qn+1=Q̄n</span></div>`,
+    info:`<h3 style="color:var(--ac3);margin-bottom:8px">T Sincron</h3><p>T = <b>Toggle</b>. D-Latch + XOR feedback: D_in = T⊕Q. T=1 → comutare la fiecare front CLK. Utilizat în numărătoare și divizoare de frecvență.</p>`
+  },
+  JK_ASYNC:{
+    name:'JK Asincron', ins:['J','K'], init:{J:0,K:0},
+    compute(p,q){const S=p.J&(1-q),R=p.K&q;if(!S&&!R)return{q1:q,op:'Memorare'};if(S&&!R)return{q1:1,op:'Set'};if(!S&&R)return{q1:0,op:'Reset'};return{q1:1-q,op:`Toggle! ${q}→${1-q}`};},
+    truth:[{i:{J:0,K:0},q1:'Qn',op:'Memorare'},{i:{J:0,K:1},q1:0,op:'Reset'},{i:{J:1,K:0},q1:1,op:'Set'},{i:{J:1,K:1},q1:'Q̄n',op:'Toggle'}],
+    eq:'Qn+1 = Jn·Q̄n + K̄n·Qn',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= J·<span style="text-decoration:overline">Q</span> + <span style="text-decoration:overline;color:#ff6b35">K</span>·Q</span></div><div class="er"><span class="es">S = J·Q̄</span><span>(poartă AND sus)</span></div><div class="er"><span class="es">R = K·Q</span><span>(poartă AND jos)</span></div><div class="er"><span class="es">J=K=1</span><span style="color:#bf5fff">Toggle — fără stare interzisă!</span></div>`,
+    info:`<h3 style="color:var(--ac2);margin-bottom:8px">JK Asincron</h3><p>SR NOR + AND gates: S=J·Q̄, R=K·Q. J=K=1 → S=Q̄, R=Q → toggle (fără stare interzisă). Risc de oscilație la J=K=1 asincron.</p>`
+  },
+  JK_SYNC:{
+    name:'JK Sincron', ins:['J','K','CLK'], init:{J:0,K:0,CLK:0},
+    compute(p,q){if(!p.CLK)return{q1:q,op:'CLK=0 → Blocat'};const S=p.J&(1-q),R=p.K&q;if(!S&&!R)return{q1:q,op:'Memorare'};if(S&&!R)return{q1:1,op:'Set'};if(!S&&R)return{q1:0,op:'Reset'};return{q1:1-q,op:`Toggle! ${q}→${1-q}`};},
+    truth:[{i:{CLK:0,J:'×',K:'×'},q1:'Qn',op:'Blocat'},{i:{CLK:'↑',J:0,K:0},q1:'Qn',op:'Memorare'},{i:{CLK:'↑',J:0,K:1},q1:0,op:'Reset'},{i:{CLK:'↑',J:1,K:0},q1:1,op:'Set'},{i:{CLK:'↑',J:1,K:1},q1:'Q̄n',op:'Toggle'}],
+    eq:'Qn+1 = Jn·Q̄n + K̄n·Qn  (la CLK↑)',
+    expr:`<div class="er"><span class="es">Qn+1</span><span style="color:#39ff14">= J·<span style="text-decoration:overline">Q</span> + <span style="text-decoration:overline;color:#ff6b35">K</span>·Q  (la CLK↑)</span></div><div class="er"><span class="es">S_eff</span><span>= J·Q̄·CLK  (2× AND)</span></div><div class="er"><span class="es">R_eff</span><span>= K·Q·CLK  (2× AND)</span></div><div class="er"><span class="es">J=K=1,CLK↑</span><span style="color:#bf5fff">Toggle</span></div>`,
+    info:`<h3 style="color:var(--ac2);margin-bottom:8px">JK Sincron — Universal</h3><p>Cel mai complet bistabil: Set, Reset, Memorare, Toggle. Fără stare interzisă. Comutare pe frontul CLK. J=K → bistabil T. J=NOT(K) → bistabil D.</p>`
+  }
+};
+
+// ═══════════════════════════════════
+// MAIN DRAW
+// ═══════════════════════════════════
+function draw(){
+  if(!document.getElementById('tS').classList.contains('active'))return;
+  cx.clearRect(0,0,cv.width,cv.height);
+  cx.fillStyle=BG; cx.fillRect(0,0,cv.width,cv.height);
+  grid();
+  cx.save();
+  cx.translate(tx+cv.width/2, ty+cv.height/2);
+  cx.scale(sc,sc);
+  cx.shadowBlur=0; cx.setLineDash([]);
+  ({SR_NOR:sch_SR_NOR,SR_NAND:sch_SR_NAND,SR_SYNC:sch_SR_SYNC,
+    D_SYNC:sch_D_SYNC,T_SYNC:sch_T_SYNC,
+    JK_ASYNC:sch_JK_ASYNC,JK_SYNC:sch_JK_SYNC})[BT]();
+  // Legend
+  const lx0=-cv.width/sc/2+8, ly0=-cv.height/sc/2+14;
+  lbl(lx0,ly0,'━ 1 (activ)','#39ff14',9,'left');
+  lbl(lx0+115,ly0,'━ 0','#1a3560',9,'left');
+  lbl(lx0+160,ly0,'╌ CLK','#ffaa22',9,'left');
+  cx.restore();
+  document.getElementById('zi').textContent=`zoom: ${Math.round(sc*100)}%  scroll=zoom  drag=pan`;
+}
+
+// ═══════════════════════════════════
+// CTRL BAR
+// ═══════════════════════════════════
+function buildCtrl(){
+  const bar=document.getElementById('cbar'); bar.innerHTML='';
+  INP={...DEF[BT].init};
+  const rb=document.createElement('button'); rb.textContent='↺ Q=0';
+  rb.onclick=()=>{Q=0;HIST=[];upd();}; bar.appendChild(rb);
+  DEF[BT].ins.forEach(k=>{
+    const sl=document.createElement('span'); sl.className='clbl'; sl.style.marginLeft='8px';
+    sl.textContent=k+':'; bar.appendChild(sl);
+    if(k==='CLK'){
+      const b=document.createElement('button'); b.id='bCLK'; b.textContent='CLK=0';
+      b.onclick=()=>{INP.CLK^=1;b.textContent='CLK='+INP.CLK;b.className=INP.CLK?'on':'';upd();};
+      bar.appendChild(b);
+    } else {
+      [0,1].forEach(v=>{
+        const b=document.createElement('button');
+        b.textContent=k+'='+v; b.id='bi_'+k+'_'+v;
+        if(INP[k]===v)b.className='on';
+        b.onclick=()=>{INP[k]=v;[0,1].forEach(u=>{const x=document.getElementById('bi_'+k+'_'+u);if(x)x.className=u===v?'on':'';});upd();};
+        bar.appendChild(b);
+      });
+    }
+  });
+  const ap=document.createElement('button'); ap.textContent='▶ Aplică'; ap.className='ap'; ap.style.marginLeft='12px';
+  ap.onclick=()=>{
+    const r=DEF[BT].compute(INP,Q);
+    if(r.q1==='x'){document.getElementById('so').textContent=r.op;document.getElementById('so').style.color='#e24b4a';return;}
+    HIST.push(Q); if(HIST.length>18)HIST.shift();
+    Q=typeof r.q1==='number'?r.q1:Q; upd();
+  };
+  bar.appendChild(ap);
+}
+
+// ═══════════════════════════════════
+// SIDEBAR UPDATE
+// ═══════════════════════════════════
+function upd(){
+  const r=DEF[BT].compute(INP,Q);
+  document.getElementById('qd').textContent='Q = '+Q;
+  document.getElementById('qd').style.color=Q?'#39ff14':'#4a6080';
+  document.getElementById('qbd').textContent='Q̄ = '+(1-Q);
+  let si='';
+  Object.entries(INP).forEach(([k,v])=>{ si+=`<span style="color:${v?'#39ff14':'#4a6080'}">${k} = ${v}</span>\n`; });
+  document.getElementById('si').innerHTML=si;
+  const so=document.getElementById('so'); so.textContent=r.op;
+  so.style.color=r.op.includes('INTERZIS')?'#e24b4a':r.op.includes('Toggle')?'#bf5fff':r.op.includes('Set')?'#39ff14':r.op.includes('Reset')?'#ff6b35':'#00d4ff';
+  const wf=document.getElementById('wf'); wf.innerHTML='';
+  [...HIST,Q].forEach(v=>{
+    const c=document.createElement('div'); c.className='wc';
+    const b=document.createElement('div'); b.className=v?'wh':'wl';
+    const l=document.createElement('div'); l.textContent=v;
+    c.appendChild(b); c.appendChild(l); wf.appendChild(c);
+  });
+  draw();
+  if(document.getElementById('tT').classList.contains('active'))renderTT();
+}
+
+// ═══════════════════════════════════
+// TRUTH TABLE
+// ═══════════════════════════════════
+function renderTT(){
+  const d=DEF[BT], rows=d.truth, keys=Object.keys(rows[0].i);
+  let h=`<h3 style="color:var(--ac);margin-bottom:10px;font-family:'Share Tech Mono',monospace;font-size:12px">${d.name} — Tabel de tranziție</h3>`;
+  h+=`<table class="tt"><thead><tr>`;keys.forEach(k=>h+=`<th>${k}</th>`);
+  h+=`<th>Qn</th><th>Qn+1</th><th>Operație</th></tr></thead><tbody>`;
+  [0,1].forEach(qn=>{
+    rows.forEach(r=>{
+      const isX=r.q1==='x';
+      const match=keys.every(k=>{const rv=r.i[k];return rv==='×'||rv===INP[k];});
+      const cur=match&&qn===Q&&!isX;
+      h+=`<tr class="${cur?'cur':''}">`;
+      keys.forEach(k=>{const v=r.i[k];h+=`<td class="${v===1?'v1':v===0?'v0':'vx'}">${v==='×'?'×':v}</td>`;});
+      const q1s=r.q1==='Qn'?'Qn':r.q1==='Q̄n'?'Q̄n':r.q1==='x'?'×':String(r.q1);
+      h+=`<td class="${qn?'v1':'v0'}">${qn}</td><td class="${isX?'vx':r.q1===1?'v1':'v0'}">${q1s}</td>`;
+      h+=`<td style="text-align:left;padding-left:12px;color:${isX?'#e24b4a':'var(--mu)'}">${r.op}</td></tr>`;
+    });
+  });
+  h+=`</tbody></table>`;
+  document.getElementById('tt').innerHTML=h;
+}
+
+// ═══════════════════════════════════
+// EXPRESSIONS + THEORY
+// ═══════════════════════════════════
+function renderExpr(){
+  const d=DEF[BT];
+  document.getElementById('te').innerHTML=
+    `<div class="ep"><div class="er"><span class="es" style="color:var(--ac)">Ecuație</span><span style="color:var(--ac)">${d.eq}</span></div></div>`+
+    `<div class="ep">${d.expr}</div>`;
+}
+function renderInfo(){
+  document.getElementById('ti').innerHTML=`<div style="max-width:660px;line-height:2;font-size:14px">${DEF[BT].info}</div>`;
+}
+
+// ═══════════════════════════════════
+// TABS
+// ═══════════════════════════════════
+function tab(id,btn){
+  document.querySelectorAll('.pane,.spane').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active'); btn.classList.add('active');
+  if(id==='tS'){resize();draw();}
+  if(id==='tT')renderTT();
+  if(id==='tE')renderExpr();
+  if(id==='tI')renderInfo();
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+function init(t){
+  BT=t; Q=0; HIST=[]; INP={...DEF[t].init};
+  buildCtrl(); renderTT(); renderExpr(); renderInfo();
+  resize(); upd();
+}
+init('SR_NOR');
+</script>
+</body>
+</html>

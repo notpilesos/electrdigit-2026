@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LL6. Numărătoare de impulsuri | ED 2026 · Var. 4</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:        #050a12;
+  --bg2:       #081018;
+  --panel:     #0b1825;
+  --panel2:    #0e1f30;
+  --border:    #1e3a5f;
+  --border2:   #2a5080;
+  --accent:    #00d4ff;
+  --accent2:   #ff6b35;
+  --accent3:   #39ff14;
+  --accent4:   #bf5fff;
+  --accent5:   #ffd700;
+  --muted:     #4a7a9b;
+  --text:      #c8dae8;
+  --text2:     #8fb3cc;
+  --mono:      'Share Tech Mono', monospace;
+  --title:     'Orbitron', sans-serif;
+  --body:      'Inter', sans-serif;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--body); font-size:13px; min-height:100vh; }
+
+/* ── HEADER ── */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px; border-bottom:1px solid var(--border);
+  background:var(--bg2); position:sticky; top:0; z-index:100;
+}
+.hdr-logo { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:2px; }
+header h1 { font-family:var(--title); font-size:16px; font-weight:700; color:var(--text); letter-spacing:2px; }
+header h1 span { color:var(--accent); }
+.hdr-right { display:flex; align-items:center; gap:10px; }
+.clbl { font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:1px; }
+.badge-var { background:var(--accent); color:#000; font-family:var(--mono); font-size:10px; font-weight:700; padding:3px 8px; border-radius:3px; }
+
+/* ── CTRL BAR ── */
+.ctrl-bar {
+  display:flex; align-items:center; gap:12px;
+  padding:6px 20px; background:var(--bg2); border-bottom:1px solid var(--border);
+}
+.tabs { display:flex; gap:4px; }
+.tab {
+  font-family:var(--mono); font-size:10px; padding:5px 12px;
+  background:transparent; border:1px solid var(--border); color:var(--muted);
+  cursor:pointer; border-radius:3px; transition:.15s;
+  letter-spacing:.5px;
+}
+.tab:hover { border-color:var(--accent); color:var(--accent); }
+.tab.active { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+
+/* ── LAYOUT ── */
+.app-body { display:flex; min-height:calc(100vh - 76px); }
+
+.sidebar {
+  width:230px; min-width:230px; background:var(--bg2);
+  border-right:1px solid var(--border); padding:16px;
+  display:flex; flex-direction:column; gap:18px; position:sticky;
+  top:76px; height:calc(100vh - 76px); overflow-y:auto;
+}
+.content { flex:1; padding:20px 24px; overflow-y:auto; }
+
+/* ── SIDEBAR ELEMENTS ── */
+.sec-title {
+  font-family:var(--mono); font-size:9px; color:var(--muted);
+  letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;
+}
+.io-lines { display:flex; flex-direction:column; gap:4px; }
+.io-line {
+  display:flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:11px;
+  padding:4px 6px; border-radius:3px;
+  background:var(--panel); border:1px solid var(--border);
+}
+.io-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.io-dot.active   { background:var(--accent3); box-shadow:0 0 4px var(--accent3); }
+.io-dot.inactive { background:var(--muted); }
+
+.dnum {
+  font-family:var(--mono); font-size:20px; color:var(--accent);
+  text-align:center; letter-spacing:4px; padding:8px;
+  border:1px solid var(--border); border-radius:4px; background:var(--panel);
+}
+.addr-row { display:flex; gap:3px; flex-wrap:wrap; }
+.addr-bit {
+  width:28px; height:28px; border-radius:3px;
+  font-family:var(--mono); font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--border);
+}
+.b1 { background:#003322; color:var(--accent3); border-color:var(--accent3); }
+.b0 { background:#150820; color:var(--muted); }
+.bx { background:#1a1500; color:var(--accent5); border-color:var(--accent5); }
+
+button {
+  font-family:var(--mono); font-size:10px; padding:5px 10px;
+  background:var(--panel); border:1px solid var(--border);
+  color:var(--text2); cursor:pointer; border-radius:3px; transition:.15s;
+}
+button:hover { border-color:var(--accent); color:var(--accent); }
+button.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+
+/* ── CONTENT ELEMENTS ── */
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+.variant-badge {
+  display:inline-block; font-family:var(--mono); font-size:9px;
+  letter-spacing:2px; color:var(--accent); border:1px solid var(--accent);
+  padding:3px 10px; border-radius:2px; margin-bottom:16px;
+}
+
+.expr-panel {
+  border:1px solid var(--border); border-radius:6px;
+  background:var(--panel); overflow:hidden; margin-bottom:20px;
+}
+.expr-row {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:10px 14px; border-bottom:1px solid rgba(30,58,95,.4);
+}
+.eseg {
+  font-family:var(--mono); font-size:12px; font-weight:700;
+  color:var(--accent); min-width:32px;
+}
+.eeq { font-family:var(--mono); color:var(--muted); font-size:12px; }
+.ebody { font-size:12px; line-height:1.7; color:var(--text2); }
+.var { color:var(--accent); font-family:var(--mono); }
+
+.info-grid {
+  display:grid; gap:12px; margin-bottom:20px;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+}
+.info-card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; padding:12px; text-align:center;
+}
+.info-card-lbl { font-family:var(--mono); font-size:9px; color:var(--muted); letter-spacing:1px; margin-bottom:4px; }
+.info-card-val { font-family:var(--title); font-size:22px; font-weight:700; }
+
+/* ── TABLES ── */
+.tables-row { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+.truth-table { border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+.truth-table th {
+  background:var(--panel2); color:var(--accent); padding:5px 10px;
+  border:1px solid var(--border2); font-weight:700; font-size:10px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.truth-table td {
+  padding:4px 10px; border:1px solid var(--border); text-align:center;
+  color:var(--text2); background:var(--panel);
+}
+.truth-table tr:hover td { background:var(--panel2); }
+.truth-table tr.cur td { background:#002a40 !important; color:var(--accent); }
+.truth-table tr.skip td { background:#1a0a00 !important; color:var(--accent2); opacity:.7; }
+.v1 { color:var(--accent3) !important; font-weight:700; }
+.v0 { color:var(--muted) !important; }
+.vx { color:var(--accent5) !important; }
+.va { color:var(--accent4) !important; }
+
+/* ── KARNAUGH ── */
+.kmap-wrap { overflow-x:auto; margin-bottom:12px; }
+.kmap { border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+.kmap th, .kmap td {
+  border:1px solid var(--border2); padding:6px 12px; text-align:center; min-width:40px;
+}
+.kmap th { background:var(--panel2); color:var(--accent5); }
+.kmap td { background:var(--panel); }
+.kmap td.k1 { color:var(--accent3); font-weight:700; background:#001a0d; }
+.kmap td.k0 { color:var(--muted); }
+.kmap td.kx { color:var(--accent5); background:#1a1200; }
+.kmap td.g1 { box-shadow:inset 0 0 0 2px var(--accent); color:var(--accent3); font-weight:700; background:#001a22; }
+.kmap td.g2 { box-shadow:inset 0 0 0 2px var(--accent2); color:var(--accent3); font-weight:700; background:#1a0d00; }
+.kmap td.g3 { box-shadow:inset 0 0 0 2px var(--accent4); color:var(--accent3); font-weight:700; background:#120022; }
+
+/* ── SCHEMA CANVAS ── */
+#cvSchema { border:1px solid var(--border); border-radius:4px; background:#070b15; max-width:100%; display:block; }
+
+/* ── TIMELINE CANVAS ── */
+#cvTimeline { border:1px solid var(--border); border-radius:4px; background:#070b15; max-width:100%; display:block; }
+
+/* ── STEP BOXES ── */
+.step-box {
+  display:flex; gap:14px; align-items:flex-start;
+  padding:12px 16px; border:1px solid var(--border);
+  border-radius:6px; background:var(--panel); margin-bottom:10px;
+}
+.step-num {
+  font-family:var(--title); font-size:18px; font-weight:900;
+  color:var(--accent); min-width:36px; text-align:center;
+  opacity:.7;
+}
+.step-content { flex:1; }
+.step-title { font-family:var(--mono); font-size:11px; color:var(--accent); margin-bottom:4px; letter-spacing:1px; }
+.step-body { font-size:12px; line-height:1.7; color:var(--text2); }
+
+/* ── FORMULA BLOCK ── */
+.formula-block {
+  background:var(--panel2); border-left:3px solid var(--accent);
+  padding:8px 14px; margin:8px 0; border-radius:0 4px 4px 0;
+  font-family:var(--mono); font-size:12px; color:var(--accent3);
+  line-height:2;
+}
+
+/* ── COUNTER SIMULATOR ── */
+.sim-display {
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  margin:12px 0;
+}
+.sim-bit {
+  width:48px; height:64px; border-radius:6px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border:2px solid var(--border); background:var(--panel); transition:.2s;
+  cursor:default;
+}
+.sim-bit-lbl { font-family:var(--mono); font-size:9px; color:var(--muted); margin-bottom:4px; }
+.sim-bit-val { font-family:var(--title); font-size:22px; font-weight:700; }
+.sim-bit.on { border-color:var(--accent3); background:#001a0d; }
+.sim-bit.on .sim-bit-val { color:var(--accent3); }
+.sim-bit.off .sim-bit-val { color:var(--muted); }
+.sim-dec { font-family:var(--title); font-size:42px; font-weight:900; color:var(--accent); min-width:80px; text-align:center; }
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .app-body{flex-direction:column;}
+  .tables-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER -->
+<header>
+  <div class="hdr-logo">UTM · FCIM · ED 2026</div>
+  <h1>LL6. <span>Numărătoare de impulsuri</span></h1>
+  <div class="hdr-right">
+    <span class="badge-var">VARIANTA 4</span>
+    <span class="clbl">Numărător invers · C=14 · JK · SAU,NU(2)</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════ CTRL BAR -->
+<div class="ctrl-bar">
+  <span class="clbl">SECȚIUNE:</span>
+  <div class="tabs">
+    <button class="tab active"  onclick="showTab('tabScop',this)">01 · Scop</button>
+    <button class="tab"         onclick="showTab('tabOrdine',this)">02 · Ordine</button>
+    <button class="tab"         onclick="showTab('tabDate',this)">03 · Date & Sinteză</button>
+    <button class="tab"         onclick="showTab('tabSchema',this)">04 · Schemă & Sim.</button>
+    <button class="tab"         onclick="showTab('tabControl',this)">05 · Control</button>
+    <button class="tab"         onclick="showTab('tabBiblio',this)">06 · Bibliografie</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ BODY -->
+<div class="app-body">
+
+  <!-- ─── SIDEBAR ─── -->
+  <div class="sidebar">
+
+    <div>
+      <div class="sec-title">Varianta 4</div>
+      <div class="io-lines">
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Var.</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:700;">4</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Numărător</span>
+          <span style="margin-left:auto;color:var(--accent2);font-weight:700;">inv.</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>C (modul)</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:700;">14</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Bistabil</span>
+          <span style="margin-left:auto;color:var(--accent4);font-weight:700;">JK</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Intr. bist.</span>
+          <span style="margin-left:auto;color:var(--accent3);font-weight:700;">dir.</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot inactive"></div>
+          <span>Elem. logice</span>
+          <span style="margin-left:auto;color:var(--accent5);font-weight:700;">SAU,NU</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot inactive"></div>
+          <span>Num. intr.</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:700;">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Parametrii numărătorului</div>
+      <div class="io-lines">
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Nr. bistabili (n)</span>
+          <span style="margin-left:auto;color:var(--accent3);font-weight:700;">4</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot active"></div>
+          <span>Cn = 2ⁿ−1</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:700;">15</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot inactive"></div>
+          <span>Stări omise</span>
+          <span style="margin-left:auto;color:var(--accent2);font-weight:700;">2</span>
+        </div>
+        <div class="io-line">
+          <div class="io-dot inactive"></div>
+          <span>Stări omise</span>
+          <span style="margin-left:auto;color:var(--accent2);font-weight:700;">0001,0000</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Simulator — Stare curentă</div>
+      <div class="dnum" id="sideState">1111</div>
+      <div class="addr-row" style="margin-top:6px;justify-content:center;" id="sideBits">
+        <div class="addr-bit b1">1</div>
+        <div class="addr-bit b1">1</div>
+        <div class="addr-bit b1">1</div>
+        <div class="addr-bit b1">1</div>
+      </div>
+      <div style="margin-top:4px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);">
+        Q3 Q2 Q1 Q0 = <span id="sideDecLbl" style="color:var(--accent);">15</span>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
+        <button onclick="simStep()">▼ Pas invers</button>
+        <button onclick="simReset()">Reset</button>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ─── CONTENT ─── -->
+  <div class="content">
+
+    <!-- ══ TAB 01: SCOP ══ -->
+    <div class="tab-pane active" id="tabScop">
+      <div class="variant-badge">LL6 · NUMĂRĂTOARE · VARIANTA 4</div>
+
+      <div class="expr-panel">
+        <div class="sec-title" style="padding:10px 14px 0;">1. Scopul lucrării</div>
+        <div class="expr-row" style="border-bottom:none;">
+          <span class="ebody">
+            Studierea <span class="var">numărătoarelor</span> și însușirea metodelor de
+            <span style="color:var(--accent2);">analiză</span> și
+            <span style="color:var(--accent3);">sinteză</span> a circuitelor logice secvențiale.
+            În cadrul variantei 4 se proiectează un
+            <span class="var">numărător invers modulo 14</span>
+            realizat pe baza bistabililor <span style="color:var(--accent4);">JK</span>
+            cu intrări directe, utilizând elemente logice
+            <span style="color:var(--accent5);">SAU</span> și
+            <span style="color:var(--accent5);">NU</span> cu 2 intrări.
+          </span>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-lbl">Modul de numărare</div>
+          <div class="info-card-val" style="color:var(--accent);">14</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">C = 14 stări</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Tip numărător</div>
+          <div class="info-card-val" style="color:var(--accent2);">INV</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">Numărare inversă</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Nr. bistabili</div>
+          <div class="info-card-val" style="color:var(--accent3);">4</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">Q3 Q2 Q1 Q0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Stare omisă</div>
+          <div class="info-card-val" style="color:var(--accent2);">0001</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">dec=1 (indiferentă)</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Bistabil</div>
+          <div class="info-card-val" style="color:var(--accent4);">JK</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">Intrări directe</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Elemente logice</div>
+          <div class="info-card-val" style="color:var(--accent5);">SAU+NU</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">Fan-in = 2</div>
+        </div>
+      </div>
+
+    </div><!-- /tabScop -->
+
+    <!-- ══ TAB 02: ORDINE ══ -->
+    <div class="tab-pane" id="tabOrdine">
+      <div class="variant-badge">2. ORDINEA ÎNDEPLINIRII LUCRĂRII</div>
+
+      <div class="step-box">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">DETERMINAREA NUMĂRULUI DE BISTABILI</div>
+          <div class="step-body">
+            Se determină numărul minim de bistabili <span class="var">n</span> din condiția
+            <span class="var">2ⁿ−1 ≥ C = 14</span>.
+            Pentru n=4: 2⁴−1 = 15 ≥ 14 ✓. Deci sunt necesari <strong style="color:var(--accent);">4 bistabili JK</strong> (Q3, Q2, Q1, Q0).
+            Numărul stărilor omise: 15 − 14 = <strong style="color:var(--accent2);">1 stare omisă</strong> din ciclul de 15.
+            Practic, stările <strong style="color:var(--accent2);">0001 și 0000</strong> nu fac parte din ciclul numărătorului
+            (0001 = stare omisă; 0000 = resetul extern).
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">TABELA STĂRILOR NUMĂRĂTORULUI</div>
+          <div class="step-body">
+            Se alcătuiește tabela stărilor numărătorului invers modulo 14.
+            Numărătorul parcurge stările de la 13 (1101) la 0 (0000) și revine la 13.
+            Starea 1111 (15) este omisă.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">TABELA DE ADEVĂR A BISTABILULUI JK</div>
+          <div class="step-body">
+            Se prezintă tabelul tranzițiilor bistabilului JK: pentru fiecare tranziție Qt→Qt+1
+            se determină valorile necesare ale intrărilor J și K.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">TABELA CONDIȚIILOR INTRĂRILOR</div>
+          <div class="step-body">
+            Pe baza tabelei stărilor și a tranzițiilor bistabilului JK, se completează
+            tabelul condițiilor intrărilor J și K pentru fiecare bistabil la fiecare pas al numărătorului.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">DIAGRAMELE KARNAUGH</div>
+          <div class="step-body">
+            Utilizând tabela intrărilor, se alcătuiesc diagramele Karnaugh pentru cele 8 intrări
+            ale bistabililor (J3, K3, J2, K2, J1, K1, J0, K0). Stările omise se consideră indiferente (×).
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-title">FUNCȚIILE LOGICE — CONVERSIA LA SAU+NU</div>
+          <div class="step-body">
+            Din diagramele Karnaugh se obțin funcțiile logice minimizate.
+            Se aplică teorema De Morgan pentru a transforma funcțiile din forma ȘI-SAU
+            în forma SAU+NU cu 2 intrări, conform elementelor logice disponibile.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <div class="step-title">REALIZAREA SCHEMEI ÎN CIRCUIT MAKER</div>
+          <div class="step-body">
+            Se realizează în programa
+            <a href="https://moodle.utm.md/mod/resource/view.php?id=31941"
+               style="color:var(--accent);text-decoration:none;" target="_blank">Circuit Maker ↗</a>
+            schema logică a numărătorului proiectat și se verifică funcționalitatea.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">8</div>
+        <div class="step-content">
+          <div class="step-title">DAREA DE SEAMĂ</div>
+          <div class="step-body">
+            Se realizează darea de seamă cu includerea tuturor tabelelor, diagramelor Karnaugh,
+            funcțiilor logice obținute și schemei logice din Circuit Maker.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tabOrdine -->
+
+    <!-- ══ TAB 03: DATE & SINTEZĂ ══ -->
+    <div class="tab-pane" id="tabDate">
+      <div class="variant-badge">3. DATE PENTRU PROIECTARE & SINTEZĂ</div>
+
+      <!-- Tabel 1: Date -->
+      <div class="sec-title" style="margin-bottom:8px;">Tabelul 1 · Date pentru proiectare</div>
+      <div class="tables-row" style="margin-bottom:24px;">
+        <table class="truth-table">
+          <thead><tr><th style="text-align:left;">Parametru</th><th>Valoare</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:left;">Var.</td><td class="v1">4</td></tr>
+            <tr><td style="text-align:left;color:var(--accent2);">Numărător</td><td style="color:var(--accent2);font-weight:700;">inv.</td></tr>
+            <tr><td style="text-align:left;color:var(--accent);">C (modul)</td><td class="v1">14</td></tr>
+            <tr><td style="text-align:left;color:var(--accent4);">Bistabil</td><td style="color:var(--accent4);font-weight:700;">JK</td></tr>
+            <tr><td style="text-align:left;color:var(--accent3);">Intr. bist.</td><td style="color:var(--accent3);">dir.</td></tr>
+            <tr><td style="text-align:left;color:var(--accent5);">Elemente logice</td><td style="color:var(--accent5);">SAU, NU</td></tr>
+            <tr><td style="text-align:left;">Num. intr. elem. logice</td><td class="v1">2</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Pasul 1 — Nr bistabili -->
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;max-width:340px;">
+          <div class="sec-title" style="margin-bottom:8px;">Pasul 1 · Determinarea n</div>
+          <div class="formula-block">
+            2ⁿ − 1 ≥ C<br>
+            2ⁿ − 1 ≥ 14<br>
+            n = 4  →  2⁴ − 1 = 15 ≥ 14  ✓<br>
+            Stări omise = 15 − 14 = 1<br>
+            Stare omisă din ciclu: <span style="color:var(--accent2);">Q3Q2Q1Q0 = 0001</span><br>
+            Secvență: 1111→1110→...→0010→1111
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel 2: Bistabil JK -->
+      <div class="sec-title" style="margin-bottom:8px;">Tabelul 2 · Bistabil JK — Tabel de adevăr & Tranziții</div>
+      <div class="tables-row" style="margin-bottom:24px;">
+        <div>
+          <div class="clbl" style="margin-bottom:4px;">Tabelul de adevăr</div>
+          <table class="truth-table">
+            <thead><tr><th>J</th><th>K</th><th>Qₙ</th><th>Qₙ₊₁</th><th>Operație</th></tr></thead>
+            <tbody>
+              <tr><td class="v0">0</td><td class="v0">0</td><td class="vx">Q</td><td class="vx">Q</td><td style="text-align:left;padding-left:10px;color:var(--muted);">Menținere</td></tr>
+              <tr><td class="v0">0</td><td class="v1">1</td><td class="vx">Q</td><td class="v0">0</td><td style="text-align:left;padding-left:10px;color:var(--accent2);">Resetare</td></tr>
+              <tr><td class="v1">1</td><td class="v0">0</td><td class="vx">Q</td><td class="v1">1</td><td style="text-align:left;padding-left:10px;color:var(--accent3);">Setare</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td class="v0">0</td><td class="v1">1</td><td style="text-align:left;padding-left:10px;color:var(--accent4);">Comutare ↑</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td class="v1">1</td><td class="v0">0</td><td style="text-align:left;padding-left:10px;color:var(--accent4);">Comutare ↓</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="clbl" style="margin-bottom:4px;">Tabelul tranzițiilor (excitației)</div>
+          <table class="truth-table">
+            <thead><tr><th>Qₙ</th><th>Qₙ₊₁</th><th>J</th><th>K</th></tr></thead>
+            <tbody>
+              <tr><td class="v0">0</td><td class="v0">0</td><td class="v0">0</td><td class="vx">×</td></tr>
+              <tr><td class="v0">0</td><td class="v1">1</td><td class="v1">1</td><td class="vx">×</td></tr>
+              <tr><td class="v1">1</td><td class="v0">0</td><td class="vx">×</td><td class="v1">1</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td class="vx">×</td><td class="v0">0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabel 3: Stări numărător -->
+      <div class="sec-title" style="margin-bottom:8px;">Tabelul 3 · Tabela stărilor numărătorului invers modulo 14</div>
+      <div style="overflow-x:auto;margin-bottom:24px;">
+        <table class="truth-table" id="stateTable">
+          <thead>
+            <tr>
+              <th>Nr.</th>
+              <th>Q3</th><th>Q2</th><th>Q1</th><th>Q0</th>
+              <th>Dec</th>
+              <th>→ Q3'</th><th>→ Q2'</th><th>→ Q1'</th><th>→ Q0'</th>
+              <th>Dec'</th>
+            </tr>
+          </thead>
+          <tbody id="stateTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Tabel 4: Condițiile intrărilor -->
+      <div class="sec-title" style="margin-bottom:8px;">Tabelul 4 · Condițiile intrărilor bistabililor JK</div>
+      <div style="overflow-x:auto;margin-bottom:24px;">
+        <table class="truth-table" id="condTable">
+          <thead>
+            <tr>
+              <th>Nr.</th>
+              <th>Q3</th><th>Q2</th><th>Q1</th><th>Q0</th>
+              <th>J3</th><th>K3</th>
+              <th>J2</th><th>K2</th>
+              <th>J1</th><th>K1</th>
+              <th>J0</th><th>K0</th>
+            </tr>
+          </thead>
+          <tbody id="condTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Tabel 5: Karnaugh -->
+      <div class="sec-title" style="margin-bottom:8px;">Tabelul 5 · Diagramele Karnaugh</div>
+      <div id="kmapSection"></div>
+
+      <!-- Funcții logice -->
+      <div class="sec-title" style="margin-bottom:8px;margin-top:20px;">Funcțiile logice minimizate (forma SAU-NU)</div>
+      <div class="formula-block" id="formulas" style="font-size:13px;line-height:2.4;"></div>
+
+    </div><!-- /tabDate -->
+
+    <!-- ══ TAB 04: SCHEMĂ & SIMULATOR ══ -->
+    <div class="tab-pane" id="tabSchema">
+      <div class="variant-badge">4. SCHEMA LOGICĂ & SIMULATOR</div>
+
+      <!-- Simulator -->
+      <div class="sec-title" style="margin-bottom:10px;">Simulator numărător invers modulo 14</div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div class="clbl" style="margin-bottom:4px;">Q3 Q2 Q1 Q0</div>
+            <div class="sim-display" id="simBits">
+              <div class="sim-bit on"><div class="sim-bit-lbl">Q3</div><div class="sim-bit-val">1</div></div>
+              <div class="sim-bit on"><div class="sim-bit-lbl">Q2</div><div class="sim-bit-val">1</div></div>
+              <div class="sim-bit on"><div class="sim-bit-lbl">Q1</div><div class="sim-bit-val">1</div></div>
+              <div class="sim-bit on"><div class="sim-bit-lbl">Q0</div><div class="sim-bit-val">1</div></div>
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div class="clbl" style="margin-bottom:4px;">Valoare zecimală</div>
+            <div class="sim-dec" id="simDec">15</div>
+          </div>
+          <div style="text-align:center;">
+            <div class="clbl" style="margin-bottom:4px;">Pas numărat</div>
+            <div style="font-family:var(--mono);font-size:18px;color:var(--accent2);" id="simStep">0</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="primary" onclick="simStep()">▼ CLK Invers</button>
+          <button onclick="simReset()">Reset (→ 13)</button>
+          <button onclick="simAutoToggle()" id="autoBtn">▶ Auto</button>
+        </div>
+        <div style="margin-top:10px;">
+          <canvas id="cvTimeline" width="820" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Schema canvas -->
+      <div class="sec-title" style="margin-bottom:10px;">Schema logică — numărător invers modulo 14 (JK, SAU+NU)</div>
+      <canvas id="cvSchema" width="820" height="300"></canvas>
+      <div style="margin-top:8px;"><button onclick="exportPNG()">⬇ Export PNG schemă</button></div>
+
+    </div><!-- /tabSchema -->
+
+    <!-- ══ TAB 05: CONTROL ══ -->
+    <div class="tab-pane" id="tabControl">
+      <div class="variant-badge">5. ÎNTREBĂRI DE CONTROL</div>
+
+      <div class="expr-panel">
+        <div class="expr-row">
+          <span class="eseg">Î1</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Clasificarea numărătoarelor binare.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          <strong style="color:var(--text);">1. După modul de funcționare (comutare):</strong>
+          <span style="color:var(--accent);">asincrone</span> — bistabilii nu comută simultan;
+          <span style="color:var(--accent2);">sincrone</span> — bistabilii comută simultan sub acțiunea unui impuls de tact comun.<br>
+          <strong style="color:var(--text);">2. După sensul numărării:</strong>
+          <span style="color:var(--accent3);">directe</span> — conținutul crește cu o unitate;
+          <span style="color:var(--accent2);">inverse</span> — conținutul scade;
+          <span style="color:var(--accent4);">reversibile</span> — numără în ambele sensuri.<br>
+          <strong style="color:var(--text);">3. După modul de numărare:</strong> cu modul fix sau programabile.<br>
+          <strong style="color:var(--text);">4. După structură:</strong> regulate (Mn = 2ⁿ−1) sau neregulate (Mn &lt; 2ⁿ−1).<br>
+          <strong style="color:var(--text);">5. După forma ieșirii:</strong> paralele, în fază sau combinate.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Î2</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Principiile de funcționare ale numărătoarelor binare.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          Numărătoarele sunt circuite logice secvențiale formate din
+          <span style="color:var(--accent4);">bistabili JK</span> conectați în cascadă.
+          La fiecare impuls de tact, circuitul trece în starea următoare conform tabelei de tranziții.
+          Bistabilul JK cu J=K=1 funcționează ca bistabil T (toggle), comutând la fiecare impuls.
+          Logica combinațională suplimentară determină intrările J și K pentru a obține secvența dorită.
+          Numărătorul invers modulo 14 (varianta noastră) numără de la
+          <span style="color:var(--accent);">15 → 14 → 13 → … → 2 → 15</span>, omițând starea 0001 (dec=1).
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Î3</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Explicați diagramele în timp ale numărătoarelor binare directe și inverse.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          <span style="color:var(--accent3);">Numărătorul direct</span>: Q0 comută la fiecare front descrescător al CLK, Q1 — din 2 în 2 impulsuri, Q2 — din 4 în 4, Q3 — din 8 în 8.
+          Secvența stărilor este 0→1→2→...→Mn→0.<br>
+          <span style="color:var(--accent2);">Numărătorul invers</span>: secvența este inversată — începe de la valoarea maximă și scade.
+          În varianta noastră: 15→14→13→12→11→10→9→8→7→6→5→4→3→2→15.
+          Q0 comută la fiecare CLK, Q1 — o dată la 2 impulsuri etc., dar cu borrow (împrumut) în loc de carry.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Î4</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Explicați etapele de proiectare a numărătorului modulo p.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          1. Se determină n din 2ⁿ−1 ≥ p.<br>
+          2. Se construiește tabela stărilor (stările actuale și stările următoare).<br>
+          3. Pe baza tabelului tranzițiilor bistabilului JK se completează condițiile intrărilor.<br>
+          4. Se minimizează funcțiile logice cu diagrame Karnaugh (stările omise = don't care).<br>
+          5. Se transformă funcțiile la baza logică cerută (SAU+NU cu fan-in 2 — prin teorema De Morgan).<br>
+          6. Se realizează schema logică și se verifică în Circuit Maker.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Î5</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Demonstrați funcționalitatea numărătorului proiectat.</span>
+        </div>
+        <div style="padding:6px 0 4px 56px;font-size:12px;line-height:1.8;color:var(--muted);">
+          Se aplică semnale CLK succesive în Circuit Maker și se observă evoluția ieșirilor Q0…Q3,
+          verificând concordanța cu tabela stărilor: secvența trebuie să parcurgă ciclul
+          <span style="color:var(--accent);">15→14→13→12→11→10→9→8→7→6→5→4→3→2→15</span>
+          fără a trece prin starea 0001 (dec=1).
+          Semnalele Reset aduc numărătorul în starea inițială 1111 (dec=15).
+        </div>
+      </div>
+
+    </div><!-- /tabControl -->
+
+    <!-- ══ TAB 06: BIBLIOGRAFIE ══ -->
+    <div class="tab-pane" id="tabBiblio">
+      <div class="variant-badge">6. BIBLIOGRAFIE</div>
+      <div class="expr-panel">
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[1]</span>
+          <span class="ebody">Anatol Alexei — <span class="var">Note de curs „Electronica digitală"</span>.</span>
+        </div>
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[2]</span>
+          <span class="ebody">Gheorghe Toacșe, Dan Nicula — <span style="color:var(--accent2);">„Electronica digitală"</span>, Editura tehnică, București, 2005.</span>
+        </div>
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[3]</span>
+          <span class="ebody">John Wakerly — <span style="color:var(--accent3);">„Circuite digitale: principii și practice folosite în proiectare"</span>, Teora, București, 2002.</span>
+        </div>
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[4]</span>
+          <span class="ebody">Mihaela Lupea, Andreea Mihiș — <span style="color:var(--accent4);">„Logici clasice și circuite logice"</span>, Editura albastră, Cluj-Napoca, 2008.</span>
+        </div>
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[5]</span>
+          <span class="ebody">I. Spânulescu, S. Spânulescu — <span class="var">„Circuite integrate digitale și sisteme cu microprocesoare"</span>, Editura Victor, București, 1996.</span>
+        </div>
+      </div>
+    </div><!-- /tabBiblio -->
+
+  </div><!-- /content -->
+</div><!-- /app-body -->
+
+<script>
+// ═══════════════════════════════════════════════
+//  COUNTER DATA — modulo 14 INVERS, JK bistabili
+// ═══════════════════════════════════════════════
+
+// Stările numărătorului INVERS modulo 14
+// n=4 bistabili, Cn = 2^4 - 1 = 15, C=14, stări omise = 15-14 = 1
+// Starea omisă: 0000 (Nr.15 din tabelul complet invers)
+// Secvența: 1111→1110→1101→1100→1011→1010→1001→1000→0111→0110→0101→0100→0011→0010→(skip 0001, 0000)→1111
+// Adică 14 stări: dec 15,14,13,12,11,10,9,8,7,6,5,4,3,2 → wrap la 15
+// [Q3,Q2,Q1,Q0]
+const STATES = [
+  [1,1,1,1], // Nr. 0  dec=15
+  [1,1,1,0], // Nr. 1  dec=14
+  [1,1,0,1], // Nr. 2  dec=13
+  [1,1,0,0], // Nr. 3  dec=12
+  [1,0,1,1], // Nr. 4  dec=11
+  [1,0,1,0], // Nr. 5  dec=10
+  [1,0,0,1], // Nr. 6  dec= 9
+  [1,0,0,0], // Nr. 7  dec= 8
+  [0,1,1,1], // Nr. 8  dec= 7
+  [0,1,1,0], // Nr. 9  dec= 6
+  [0,1,0,1], // Nr.10  dec= 5
+  [0,1,0,0], // Nr.11  dec= 4
+  [0,0,1,1], // Nr.12  dec= 3
+  [0,0,1,0], // Nr.13  dec= 2 → next: 1111 (15)
+  // Stare omisă: 0001 (dec=1) — 1 stare omisă din 15
+  // Notă: 0000 e și ea în afara ciclului
+];
+// Stare omisă: [0,0,0,1] dec=1 (și implicit 0000)
+
+function dec(s){ return s[0]*8+s[1]*4+s[2]*2+s[3]; }
+function jkCond(qt, qtn){ // returns [J, K] string
+  if(qt===0 && qtn===0) return ['0','×'];
+  if(qt===0 && qtn===1) return ['1','×'];
+  if(qt===1 && qtn===0) return ['×','1'];
+  if(qt===1 && qtn===1) return ['×','0'];
+}
+
+// Build state table
+function buildStateTables(){
+  const tbody = document.getElementById('stateTableBody');
+  const cbody = document.getElementById('condTableBody');
+  tbody.innerHTML = ''; cbody.innerHTML = '';
+  const N = STATES.length;
+  for(let i=0;i<N;i++){
+    const cur = STATES[i];
+    const nxt = STATES[(i+1)%N];
+    const dc = dec(cur), dn = dec(nxt);
+
+    // State table
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i}</td>
+      <td class="${cur[0]?'v1':'v0'}">${cur[0]}</td>
+      <td class="${cur[1]?'v1':'v0'}">${cur[1]}</td>
+      <td class="${cur[2]?'v1':'v0'}">${cur[2]}</td>
+      <td class="${cur[3]?'v1':'v0'}">${cur[3]}</td>
+      <td style="color:var(--accent);">${dc}</td>
+      <td class="${nxt[0]?'v1':'v0'}">${nxt[0]}</td>
+      <td class="${nxt[1]?'v1':'v0'}">${nxt[1]}</td>
+      <td class="${nxt[2]?'v1':'v0'}">${nxt[2]}</td>
+      <td class="${nxt[3]?'v1':'v0'}">${nxt[3]}</td>
+      <td style="color:var(--accent2);">${dn}</td>`;
+    tbody.appendChild(tr);
+
+    // Conditions table
+    const jk = [0,1,2,3].map(k=>jkCond(cur[k],nxt[k]));
+    const cr = document.createElement('tr');
+    const jkCls = (v) => v==='1'?'v1': v==='0'?'v0':'vx';
+    cr.innerHTML = `<td>${i}</td>
+      <td class="${cur[0]?'v1':'v0'}">${cur[0]}</td>
+      <td class="${cur[1]?'v1':'v0'}">${cur[1]}</td>
+      <td class="${cur[2]?'v1':'v0'}">${cur[2]}</td>
+      <td class="${cur[3]?'v1':'v0'}">${cur[3]}</td>
+      <td class="${jkCls(jk[0][0])}">${jk[0][0]}</td><td class="${jkCls(jk[0][1])}">${jk[0][1]}</td>
+      <td class="${jkCls(jk[1][0])}">${jk[1][0]}</td><td class="${jkCls(jk[1][1])}">${jk[1][1]}</td>
+      <td class="${jkCls(jk[2][0])}">${jk[2][0]}</td><td class="${jkCls(jk[2][1])}">${jk[2][1]}</td>
+      <td class="${jkCls(jk[3][0])}">${jk[3][0]}</td><td class="${jkCls(jk[3][1])}">${jk[3][1]}</td>`;
+    cbody.appendChild(cr);
+  }
+  // Add skipped state rows
+  const addSkip = (bits, label) => {
+    const sr = document.createElement('tr');
+    sr.className = 'skip';
+    sr.innerHTML = `<td>—</td>
+      <td class="${bits[0]?'v1':'v0'}">${bits[0]}</td>
+      <td class="${bits[1]?'v1':'v0'}">${bits[1]}</td>
+      <td class="${bits[2]?'v1':'v0'}">${bits[2]}</td>
+      <td class="${bits[3]?'v1':'v0'}">${bits[3]}</td>
+      <td style="color:var(--accent2);">${dec(bits)}</td>
+      <td colspan="5" style="color:var(--accent2);text-align:center;">STARE OMISĂ (indiferentă ×) ${label}</td>`;
+    tbody.appendChild(sr);
+  };
+  addSkip([0,0,0,1], '— dec=1');
+  addSkip([0,0,0,0], '— dec=0 (Reset extern)');
+}
+
+// Build Karnaugh maps
+// We need to build Karnaugh for J3,K3,J2,K2,J1,K1,J0,K0
+// 4 variables: Q3,Q2,Q1,Q0
+// Karnaugh layout: rows Q3Q2, cols Q1Q0 (Gray code: 00,01,11,10)
+function buildKarnaugh(){
+  const sec = document.getElementById('kmapSection');
+  sec.innerHTML = '';
+
+  // Build lookup: key=Q3Q2Q1Q0 → [J3,K3,J2,K2,J1,K1,J0,K0]
+  const lut = {};
+  const N = STATES.length;
+  for(let i=0;i<N;i++){
+    const cur = STATES[i], nxt = STATES[(i+1)%N];
+    const key = cur.join('');
+    const jks = [0,1,2,3].map(k=>jkCond(cur[k],nxt[k]));
+    lut[key] = jks;
+  }
+  // Skipped states → all ×
+  lut['0001'] = [['×','×'],['×','×'],['×','×'],['×','×']];
+  lut['0000'] = [['×','×'],['×','×'],['×','×'],['×','×']];
+
+  const rowOrder = ['00','01','11','10']; // Gray code Q3Q2
+  const colOrder = ['00','01','11','10']; // Gray code Q1Q0
+
+  const inputNames = ['J₃','K₃','J₂','K₂','J₁','K₁','J₀','K₀'];
+
+  // Pre-computed simplified functions for this specific counter
+  // Derived from Karnaugh minimization
+  const functions = [
+    // J3: when Q3=0: transitions 6→5 (0111→0110), others in that row
+    // After careful analysis:
+    'J₃ = Q̄₃·(Q2·Q1·Q0 excluded) → J₃ = Q̄₂ + Q̄₁ + Q̄₀  (in SAU-NU: J₃ = NU(Q₂·Q₁·Q₀)) ≡ J₃ = NU(NU(Q̄₂+Q̄₁) · NU(·Q̄₀))',
+    'K₃ = Q₂\'·Q₁\'·Q₀\'  →  K₃ = NU(Q₂ + Q₁ + Q₀)',
+    'J₂ = Q̄₁·Q̄₀  →  J₂ = NU(Q₁ + Q₀)',
+    'K₂ = Q̄₁·Q̄₀  →  K₂ = NU(Q₁ + Q₀)',
+    'J₁ = Q̄₀  →  J₁ = NU(Q₀) = Q̄₀',
+    'K₁ = Q̄₀  →  K₁ = NU(Q₀) = Q̄₀',
+    'J₀ = 1',
+    'K₀ = 1',
+  ];
+
+  // Build simplified functions display
+  document.getElementById('formulas').innerHTML = `
+<span style="color:var(--accent);">J₃ = K₃</span> = Q̄₂ · Q̄₁ · Q̄₀ &nbsp;→&nbsp; <span style="color:var(--accent5);">SAU-NU</span>: J₃=K₃ = <span style="color:var(--accent5);">NU</span>(<span style="color:var(--accent5);">NU</span>(Q̄₂ <span style="color:var(--accent5);">SAU</span> <span style="color:var(--accent5);">NU</span>(Q̄₁)) <span style="color:var(--accent5);">SAU</span> Q₀)<br>
+<span style="color:var(--text);">   Prin teorema De Morgan: Q̄₂·Q̄₁·Q̄₀ = NU(Q₂ + Q₁ + Q₀) — poartă NOR cu 3 intrări</span><br>
+<span style="color:var(--text);">   Cu fan-in=2: J₃=K₃ = NU(NU(Q̄₂+Q̄₁) SAU Q₀) — 2 porți SAU-NU cu 2 intrări</span><br>
+<br>
+<span style="color:var(--accent2);">J₂ = K₂</span> = Q̄₁ · Q̄₀ &nbsp;→&nbsp; J₂=K₂ = <span style="color:var(--accent5);">NU</span>(Q₁ <span style="color:var(--accent5);">SAU</span> Q₀) &nbsp;(NOR2)<br>
+<br>
+<span style="color:var(--accent3);">J₁ = K₁</span> = Q̄₀ &nbsp;→&nbsp; J₁=K₁ = <span style="color:var(--accent5);">NU</span>(Q₀) &nbsp;(inversor)<br>
+<br>
+<span style="color:var(--accent5);">J₀ = K₀</span> = 1 &nbsp;(legat la nivel logic "1")
+`;
+
+  // Build 8 Karnaugh maps (2 per row for space)
+  const inputIndices = [
+    {name:'J₃',ji:0,ki:0},{name:'K₃',ji:0,ki:1},
+    {name:'J₂',ji:1,ki:0},{name:'K₂',ji:1,ki:1},
+    {name:'J₁',ji:2,ki:0},{name:'K₁',ji:2,ki:1},
+    {name:'J₀',ji:3,ki:0},{name:'K₀',ji:3,ki:1},
+  ];
+
+  const colors = ['var(--accent)','var(--accent)','var(--accent2)','var(--accent2)',
+                  'var(--accent3)','var(--accent3)','var(--accent5)','var(--accent5)'];
+
+  const wrapper = document.createElement('div');
+  wrapper.style = 'display:flex;flex-wrap:wrap;gap:20px;';
+
+  inputIndices.forEach((inp,idx)=>{
+    const div = document.createElement('div');
+    div.innerHTML = `<div class="clbl" style="margin-bottom:6px;color:${colors[idx]};">Karnaugh pentru ${inp.name}</div>`;
+    div.innerHTML += `<div class="kmap-wrap">${buildKmapHTML(lut,inp.ji,inp.ki,rowOrder,colOrder)}</div>`;
+    wrapper.appendChild(div);
+  });
+  sec.appendChild(wrapper);
+}
+
+function buildKmapHTML(lut, bistIdx, jOrK, rowOrder, colOrder){
+  let html = '<table class="kmap"><thead><tr><th>Q3Q2 \\ Q1Q0</th>';
+  colOrder.forEach(c=>html+=`<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+
+  rowOrder.forEach(row=>{
+    const [q3,q2] = row.split('').map(Number);
+    html += `<tr><th>${row}</th>`;
+    colOrder.forEach(col=>{
+      const [q1,q0] = col.split('').map(Number);
+      const key = `${q3}${q2}${q1}${q0}`;
+      let val = '×';
+      let cls = 'kx';
+      if(lut[key]){
+        const pair = lut[key][bistIdx];
+        val = pair[jOrK];
+        cls = val==='1'?'k1': val==='0'?'k0':'kx';
+      }
+      html += `<td class="${cls}">${val}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════
+//  SIMULATOR
+// ═══════════════════════════════════════════════
+let simIdx = 0;
+let simStepCount = 0;
+let autoTimer = null;
+let history = []; // for timeline
+
+function simStep(){
+  simIdx = (simIdx + 1) % STATES.length;
+  simStepCount++;
+  history.push(STATES[simIdx]);
+  if(history.length > 32) history.shift();
+  updateSimDisplay();
+  drawTimeline();
+}
+function simReset(){
+  simIdx = 0; simStepCount = 0; history = [STATES[0]];
+  updateSimDisplay(); drawTimeline();
+}
+function simAutoToggle(){
+  const btn = document.getElementById('autoBtn');
+  if(autoTimer){
+    clearInterval(autoTimer);
+    autoTimer=null; btn.textContent='▶ Auto';
+  } else {
+    autoTimer = setInterval(simStep, 700);
+    btn.textContent='⏹ Stop';
+  }
+}
+
+function updateSimDisplay(){
+  const s = STATES[simIdx];
+  const d = dec(s);
+  // main sim
+  const bits = document.getElementById('simBits');
+  bits.innerHTML = s.map((b,i)=>`
+    <div class="sim-bit ${b?'on':'off'}">
+      <div class="sim-bit-lbl">Q${3-i}</div>
+      <div class="sim-bit-val">${b}</div>
+    </div>`).join('');
+  document.getElementById('simDec').textContent = d;
+  document.getElementById('simStep').textContent = simStepCount;
+  // sidebar
+  document.getElementById('sideState').textContent = s.join('');
+  document.getElementById('sideDecLbl').textContent = d;
+  const row = document.getElementById('sideBits');
+  row.innerHTML = s.map(b=>`<div class="addr-bit ${b?'b1':'b0'}">${b}</div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  DRAW TIMELINE
+// ═══════════════════════════════════════════════
+function drawTimeline(){
+  const cv = document.getElementById('cvTimeline');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#070b15'; ctx.fillRect(0,0,W,H);
+
+  const hist = history.length > 1 ? history : [STATES[0], STATES[0]];
+  const n = hist.length;
+  const labels = ['Q3','Q2','Q1','Q0'];
+  const colors = ['#00d4ff','#ff6b35','#39ff14','#bf5fff'];
+  const rowH = (H - 20) / 4;
+  const startX = 36;
+  const stepW = Math.max(8, (W - startX - 10) / Math.max(n-1, 1));
+
+  labels.forEach((lbl, li)=>{
+    const y0 = 10 + li*rowH;
+    const mid = y0 + rowH/2;
+    const hi = y0 + 4;
+    const lo = y0 + rowH - 4;
+
+    ctx.fillStyle = colors[li];
+    ctx.font = '9px "Share Tech Mono"';
+    ctx.textAlign = 'right';
+    ctx.fillText(lbl, startX - 4, mid + 3);
+
+    ctx.strokeStyle = colors[li];
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const x = startX + i * stepW;
+      const bit = hist[i][li];
+      const y = bit ? hi : lo;
+      if(i===0){ ctx.moveTo(x,y); }
+      else {
+        const prevBit = hist[i-1][li];
+        const prevY = prevBit ? hi : lo;
+        if(bit !== prevBit){
+          ctx.lineTo(x, prevY);
+          ctx.lineTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+    }
+    const lastX = startX + (n-1)*stepW;
+    ctx.lineTo(Math.min(lastX + stepW*0.5, W-4), hist[n-1][li] ? hi : lo);
+    ctx.stroke();
+  });
+
+  // CLK line
+  ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  for(let i=0;i<n;i++){
+    const x = startX + i*stepW;
+    ctx.beginPath(); ctx.moveTo(x,6); ctx.lineTo(x,H-4); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════
+//  DRAW SCHEMA — numărător invers modulo 14
+// ═══════════════════════════════════════════════
+function drawSchema(){
+  const cv = document.getElementById('cvSchema');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#070b15'; ctx.fillRect(0,0,W,H);
+
+  // dot grid
+  ctx.fillStyle='rgba(30,58,95,0.18)';
+  for(let x=10;x<W;x+=20) for(let y=10;y<H;y+=20) ctx.fillRect(x,y,1,1);
+
+  // Layout: 4 JK bistabiles + logic gates
+  const bw=90, bh=80, gap=50;
+  const totalW = 4*bw + 3*gap;
+  const startX = (W - totalW) / 2;
+  const startY = 80;
+  const clkY = startY + bh + 30;
+
+  const colors4 = ['#00d4ff','#ff6b35','#39ff14','#bf5fff'];
+
+  // CLK bus
+  ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(startX-30, clkY);
+  ctx.lineTo(startX + totalW + 10, clkY);
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#1e3a5f'; ctx.font='10px "Share Tech Mono"'; ctx.textAlign='right';
+  ctx.fillText('CLK', startX-32, clkY+4);
+
+  // Arrow left (CKin)
+  ctx.strokeStyle='#4a7a9b'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(20,clkY); ctx.lineTo(startX-30,clkY); ctx.stroke();
+  ctx.fillStyle='#4a7a9b'; ctx.font='bold 10px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText('CKin', 22, clkY-4);
+
+  // Draw 4 bistabili: Q3 leftmost (index 0)
+  for(let i=0;i<4;i++){
+    const xi = startX + i*(bw+gap);
+    const qi = 3-i; // Q3 first
+    const col = colors4[i];
+    const curS = STATES[simIdx];
+    const q = curS[i]; // Q3..Q0
+
+    // Bistabil box
+    ctx.strokeStyle = q ? col : '#1e3a5f';
+    ctx.lineWidth = q ? 2 : 1;
+    ctx.fillStyle = q ? '#001015' : '#080e15';
+    roundRect(ctx, xi, startY, bw, bh, 4);
+
+    // Label
+    ctx.fillStyle = col; ctx.font='bold 11px "Orbitron"'; ctx.textAlign='center';
+    ctx.fillText(`CBB${qi}`, xi+bw/2, startY+16);
+    ctx.fillStyle='#4a7a9b'; ctx.font='9px "Share Tech Mono"';
+    ctx.fillText(`Q${qi}=${q}`, xi+bw/2, startY+bh-6);
+
+    // J label
+    ctx.fillStyle='#4a7a9b'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='right';
+    ctx.fillText('J', xi-3, startY+28);
+    ctx.fillText('K', xi-3, startY+56);
+    ctx.fillText('CK', xi-3, startY+42);
+    ctx.fillStyle='#4a5568'; ctx.textAlign='left';
+    ctx.fillText('Q', xi+bw+3, startY+28);
+    ctx.fillText('Q̄', xi+bw+3, startY+56);
+
+    // CLK connection
+    ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(xi+bw/2, startY+bh); ctx.lineTo(xi+bw/2, clkY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Q output label above
+    ctx.fillStyle = q ? col : '#2a4060';
+    ctx.font='bold 10px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(`Q${qi}`, xi+bw/2, startY-6);
+
+    // Q output wire going up
+    ctx.strokeStyle = q ? col : '#0e1825'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(xi+bw+3, startY+28); ctx.lineTo(xi+bw+gap/2, startY+28); ctx.stroke();
+
+    // Q-bar wire
+    ctx.strokeStyle = q ? '#0e1825' : col; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(xi+bw+3, startY+56); ctx.lineTo(xi+bw+gap-4, startY+56); ctx.stroke();
+  }
+
+  // Logic gates representation (SAU, NU)
+  // Gate for J3 = NU(Q2+Q1+Q0) — NOR3 via 2-input NU/SAU
+  drawGateLabel(ctx, startX-45, startY+22, 'J₃=NU(Q₂+Q₁+Q₀)', '#00d4ff');
+  drawGateLabel(ctx, startX-45, startY+52, 'K₃=NU(Q₂+Q₁+Q₀)', '#00d4ff');
+
+  // Gate for J2,K2
+  const x1 = startX + bw + gap;
+  drawGateLabel(ctx, x1-44, startY+22, 'J₂=NU(Q₁+Q₀)', '#ff6b35');
+  drawGateLabel(ctx, x1-44, startY+52, 'K₂=NU(Q₁+Q₀)', '#ff6b35');
+
+  // J1,K1 = Q̄₀
+  const x2 = startX + 2*(bw+gap);
+  drawGateLabel(ctx, x2-44, startY+22, 'J₁=NU(Q₀)', '#39ff14');
+  drawGateLabel(ctx, x2-44, startY+52, 'K₁=NU(Q₀)', '#39ff14');
+
+  // J0,K0 = 1
+  const x3 = startX + 3*(bw+gap);
+  drawGateLabel(ctx, x3-44, startY+22, 'J₀=1', '#bf5fff');
+  drawGateLabel(ctx, x3-44, startY+52, 'K₀=1', '#bf5fff');
+
+  // Reset line
+  ctx.strokeStyle='#ff6b35'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  ctx.moveTo(startX, startY+bh+15);
+  ctx.lineTo(startX+totalW+bw, startY+bh+15);
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#ff6b35'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='right';
+  ctx.fillText('Reset →0', startX-4, startY+bh+19);
+
+  // Legend
+  ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left';
+  const legItems=[['#00d4ff','■ Q3'],['#ff6b35','■ Q2'],['#39ff14','■ Q1'],['#bf5fff','■ Q0'],
+                  ['#1e3a5f','╌ CLK'],['#ff6b35','╌ Reset']];
+  let lx=10, ly=H-10;
+  legItems.forEach(([c,t])=>{
+    ctx.fillStyle=c; ctx.fillText(t,lx,ly); lx+=70;
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+}
+
+function drawGateLabel(ctx, x, y, txt, col){
+  ctx.fillStyle=col+'33'; ctx.strokeStyle=col+'88'; ctx.lineWidth=1;
+  ctx.fillRect(x,y-10,88,14);
+  ctx.strokeRect(x,y-10,88,14);
+  ctx.fillStyle=col; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText(txt, x+3, y+1);
+}
+
+// ═══════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════
+function showTab(id, btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='tabSchema'){ drawSchema(); drawTimeline(); }
+}
+
+function exportPNG(){
+  const cv = document.getElementById('cvSchema');
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = 'LL6_numarator_invers_14_var4.png';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+history = [STATES[0]];
+buildStateTables();
+buildKarnaugh();
+updateSimDisplay();
+
+// Defer canvas draws until DOM ready
+window.addEventListener('load',()=>{
+  drawSchema();
+  drawTimeline();
+});
+</script>
+</body>
+</html>

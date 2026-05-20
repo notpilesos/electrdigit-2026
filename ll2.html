@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCD → 7 Segmente | Laborator Complet</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="hdr-logo">Laborator Nr. 2 · Circuite Logice Combinationale</div>
+    <h1>Decodificator BCD → 7 <span>Segmente</span></h1>
+  </div>
+  <div class="hdr-right">
+    <span class="clbl">Varianta:</span>
+    <select id="varSel" onchange="applyVariant()">
+      <option value="1">1 — NU, SAU / 2 intr. / directe</option>
+      <option value="2">2 — ȘI, NU / 3 intr. / inverse</option>
+      <option value="3">3 — SAU-NU / 4 intr. / directe</option>
+      <option value="4">4 — ȘI-NU / 2 intr. / inverse</option>
+      <option value="5">5 — SAU-NU / 3 intr. / directe</option>
+      <option value="6">6 — ȘI-NU / 4 intr. / inverse</option>
+      <option value="7">7 — ȘI, NU / 2 intr. / directe</option>
+      <option value="8">8 — SAU, NU / 3 intr. / inverse</option>
+      <option value="9">9 — ȘI-NU / 4 intr. / directe</option>
+      <option value="10">10 — SAU-NU / 2 intr. / inverse</option>
+    </select>
+  </div>
+</header>
+
+<!-- CONTROLS -->
+<div class="ctrl-bar">
+  <span class="clbl">Segment:</span>
+  <div id="segBtns"></div>
+  <span class="clbl" style="margin-left:10px">Mod schemă:</span>
+  <button id="btnSingle" onclick="setSchemaMode('single')" class="act">Un segment</button>
+  <button id="btnAll"    onclick="setSchemaMode('all')">Toate (7)</button>
+  <span class="clbl" style="margin-left:10px">Cifra:</span>
+  <span id="digitTopLbl" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent);font-weight:bold">0</span>
+  <input type="range" min="0" max="15" value="0" id="digitSlider" oninput="setDigit(+this.value)" style="width:140px">
+</div>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div>
+      <div class="sec-title">Cifra curentă</div>
+      <div class="dnum" id="dnum">0</div>
+      <div class="seg-disp">
+        <div class="sg sg-a" id="sg_a"></div><div class="sg sg-b" id="sg_b"></div>
+        <div class="sg sg-c" id="sg_c"></div><div class="sg sg-d" id="sg_d"></div>
+        <div class="sg sg-e" id="sg_e"></div><div class="sg sg-f" id="sg_f"></div>
+        <div class="sg sg-g" id="sg_g"></div>
+      </div>
+      <div class="bitrow" id="bitrow"></div>
+      <div class="blbl">
+        <span class="bl">A₃</span><span class="bl">A₂</span>
+        <span class="bl">A₁</span><span class="bl">A₀</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Ieșiri decodificator</div>
+      <div class="radio-group">
+        <label class="radio-label"><input type="radio" name="output" value="direct" id="outDirect" onchange="onOutputChange()"> Directe (a,b…g)</label>
+        <label class="radio-label"><input type="radio" name="output" value="inverse" id="outInverse" onchange="onOutputChange()"> Inverse (ā,b̄…ḡ)</label>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Segmente vizibile</div>
+      <div class="seg-checks" id="segChecks"></div>
+    </div>
+
+    <div style="background:#070b15;border:1px solid var(--border);border-radius:4px;padding:10px;font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.8">
+      <div class="sec-title" style="margin-bottom:6px">Expresie segment curent</div>
+      <div id="curExprSidebar"></div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('tabTruth',this)">Tabel Adevăr</button>
+      <button class="tab" onclick="showTab('tabKarnaugh',this)">Karnaugh</button>
+      <button class="tab" onclick="showTab('tabExpr',this)">Expresii</button>
+      <button class="tab" onclick="showTab('tabSchema',this)">Schema Logică</button>
+      <button class="tab" onclick="showTab('tabInfo',this)">Info Variantă</button>
+    </div>
+
+    <!-- TRUTH TABLE -->
+    <div id="tabTruth" class="tab-pane active">
+      <div id="truthTableContainer"></div>
+    </div>
+
+    <!-- KARNAUGH -->
+    <div id="tabKarnaugh" class="tab-pane">
+      <div id="karnaughContainer"></div>
+    </div>
+
+    <!-- EXPRESSIONS -->
+    <div id="tabExpr" class="tab-pane">
+      <div id="exprContainer"></div>
+    </div>
+
+    <!-- SCHEMA -->
+    <div id="tabSchema" class="schema-pane">
+      <div class="schema-toolbar">
+        <button onclick="doZoom(1.18)">＋ Zoom</button>
+        <button onclick="doZoom(0.85)">－ Zoom</button>
+        <button onclick="resetView()">↺ Reset</button>
+        <button onclick="exportPNG()">⬇ PNG</button>
+        <span class="zinfo" id="zinfo">zoom: 100% | drag to pan | scroll to zoom</span>
+      </div>
+      <div class="schema-body" id="schemaBody">
+        <canvas id="cv"></canvas>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div id="tabInfo" class="tab-pane">
+      <div id="infoContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// SHARED DATA
+// ═══════════════════════════════════════════════════════════════════
+const SEG_TABLE = [
+  [1,1,1,1,1,1,0], // 0
+  [0,1,1,0,0,0,0], // 1
+  [1,1,0,1,1,0,1], // 2
+  [1,1,1,1,0,0,1], // 3
+  [0,1,1,0,0,1,1], // 4
+  [1,0,1,1,0,1,1], // 5
+  [1,0,1,1,1,1,1], // 6
+  [1,1,1,0,0,0,0], // 7
+  [1,1,1,1,1,1,1], // 8
+  [1,1,1,1,0,1,1], // 9
+  [1,1,1,0,1,1,1], // A
+  [0,0,1,1,1,1,1], // b
+  [1,0,0,1,1,1,0], // C
+  [0,1,1,1,1,0,1], // d
+  [1,0,0,1,1,1,1], // E
+  [1,0,0,0,1,1,1], // F
+];
+const HEX_LABELS = ['0','1','2','3','4','5','6','7','8','9','A','b','C','d','E','F'];
+const SNAMES = ['a','b','c','d','e','f','g'];
+
+// FMC (direct active-high): array of OR-terms, each term is array of {v:0..3, n:bool}
+// v=3→A3, v=2→A2, v=1→A1, v=0→A0
+const FMC = {
+  a:[ [{v:3,n:0},{v:2,n:0},{v:1,n:0},{v:0,n:0}], [{v:3,n:0},{v:2,n:1},{v:1,n:0},{v:0,n:1}] ],
+  b:[ [{v:3,n:0},{v:2,n:1},{v:1,n:0},{v:0,n:0}], [{v:3,n:0},{v:2,n:1},{v:1,n:1},{v:0,n:0}] ],
+  c:[ [{v:3,n:0},{v:2,n:0},{v:1,n:1},{v:0,n:0}] ],
+  d:[ [{v:3,n:0},{v:2,n:0},{v:1,n:0},{v:0,n:1}], [{v:3,n:0},{v:2,n:1},{v:1,n:0},{v:0,n:0}], [{v:3,n:0},{v:2,n:1},{v:1,n:1},{v:0,n:1}] ],
+  e:[ [{v:3,n:0},{v:2,n:0},{v:1,n:0},{v:0,n:1}], [{v:3,n:0},{v:2,n:1},{v:1,n:0},{v:0,n:1}] ],
+  f:[ [{v:3,n:0},{v:2,n:0},{v:1,n:0},{v:0,n:0}], [{v:3,n:0},{v:2,n:0},{v:1,n:1},{v:0,n:1}], [{v:3,n:0},{v:2,n:1},{v:1,n:1},{v:0,n:0}] ],
+  g:[ [{v:3,n:0},{v:2,n:0},{v:1,n:0},{v:0,n:0}], [{v:3,n:0},{v:2,n:1},{v:1,n:0},{v:0,n:1}] ],
+};
+
+// FMC text strings
+const FMC_STR = {
+  a:'(A₃+A₂+A₁+A₀)·(A₃+Ā₂+A₁+Ā₀)',
+  b:'(A₃+Ā₂+A₁+A₀)·(A₃+Ā₂+Ā₁+A₀)',
+  c:'(A₃+A₂+Ā₁+A₀)',
+  d:'(A₃+A₂+A₁+Ā₀)·(A₃+Ā₂+A₁+A₀)·(A₃+Ā₂+Ā₁+Ā₀)',
+  e:'(A₃+A₂+A₁+Ā₀)·(A₃+Ā₂+A₁+Ā₀)',
+  f:'(A₃+A₂+A₁+A₀)·(A₃+A₂+Ā₁+Ā₀)·(A₃+Ā₂+Ā₁+A₀)',
+  g:'(A₃+A₂+A₁+A₀)·(A₃+Ā₂+A₁+Ā₀)',
+};
+const FMD_STR = {
+  a:'A₃ + A₂·A₀ + A₂·A₁ + Ā₂·Ā₀·Ā₁',
+  b:'A₃ + Ā₂ + Ā₁·Ā₀ + A₁·A₀',
+  c:'A₃ + A₂ + Ā₁ + A₀',
+  d:'A₃ + A₁·Ā₀ + Ā₂·A₁ + A₂·Ā₁·A₀ + Ā₂·Ā₁·Ā₀',
+  e:'A₃ + Ā₂·Ā₀ + A₁·Ā₀',
+  f:'A₃ + A₂·Ā₁ + A₂·Ā₀ + Ā₂·Ā₁·Ā₀ + Ā₁·A₀',
+  g:'A₃ + A₂·Ā₁ + Ā₂·A₁ + A₂·Ā₀',
+};
+
+const VARIANTS = {
+  1: {out:'direct', gate:'OR',  final:'AND', fanin:2, negOR:false, negAND:false, label:'NU, SAU'},
+  2: {out:'inverse',gate:'AND', final:'OR',  fanin:3, negOR:false, negAND:true,  label:'ȘI, NU'},
+  3: {out:'direct', gate:'OR',  final:'AND', fanin:4, negOR:true,  negAND:true,  label:'SAU-NU'},
+  4: {out:'inverse',gate:'AND', final:'OR',  fanin:2, negOR:true,  negAND:true,  label:'ȘI-NU'},
+  5: {out:'direct', gate:'OR',  final:'AND', fanin:3, negOR:true,  negAND:true,  label:'SAU-NU'},
+  6: {out:'inverse',gate:'AND', final:'OR',  fanin:4, negOR:true,  negAND:true,  label:'ȘI-NU'},
+  7: {out:'direct', gate:'AND', final:'OR',  fanin:2, negOR:false, negAND:true,  label:'ȘI, NU'},
+  8: {out:'inverse',gate:'OR',  final:'AND', fanin:3, negOR:false, negAND:true,  label:'SAU, NU'},
+  9: {out:'direct', gate:'AND', final:'OR',  fanin:4, negOR:true,  negAND:true,  label:'ȘI-NU'},
+  10:{out:'inverse',gate:'OR',  final:'AND', fanin:2, negOR:true,  negAND:true,  label:'SAU-NU'},
+};
+
+// Karnaugh map ordering
+const KM_ROWS = ['00','01','11','10'];
+const KM_COLS = ['00','01','11','10'];
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let V = VARIANTS[1];
+let digit = 0;
+let inverse = false;
+let curSeg = 'a';
+let schemaMode = 'single';
+let selectedSegs = [0,1,2,3,4,5,6];
+let sc = 1, tx = 0, ty = 0;
+let panning = false, px0 = 0, py0 = 0;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function getBits(d) { return d.toString(2).padStart(4,'0').split('').map(Number); }
+function getSegVal(d, si) { return SEG_TABLE[d][si]; }
+function getMinterm(ri, ci) {
+  const r=KM_ROWS[ri], c=KM_COLS[ci];
+  return parseInt(r[0])*8+parseInt(r[1])*4+parseInt(c[0])*2+parseInt(c[1]);
+}
+function evalORterm(term, bits) {
+  for(const t of term){ const b=bits[3-t.v]; if(t.n?1-b:b) return 1; }
+  return 0;
+}
+function evalFMC(seg, bits) {
+  for(const term of FMC[seg]) if(!evalORterm(term,bits)) return 0;
+  return 1;
+}
+function formatExpr(expr) {
+  return expr
+    .replace(/Ā₃/g,'<span class="neg">A₃</span>').replace(/Ā₂/g,'<span class="neg">A₂</span>')
+    .replace(/Ā₁/g,'<span class="neg">A₁</span>').replace(/Ā₀/g,'<span class="neg">A₀</span>')
+    .replace(/A₃/g,'<span class="var">A₃</span>').replace(/A₂/g,'<span class="var">A₂</span>')
+    .replace(/A₁/g,'<span class="var">A₁</span>').replace(/A₀/g,'<span class="var">A₀</span>')
+    .replace(/·/g,'<span class="op">·</span>').replace(/\+/g,'<span class="op"> + </span>');
+}
+function segName(s) {
+  return inverse ? `<span style="text-decoration:overline">${s}</span>` : s;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// APPLY VARIANT
+// ═══════════════════════════════════════════════════════════════════
+function applyVariant() {
+  const n = +document.getElementById('varSel').value;
+  V = VARIANTS[n];
+  inverse = V.out === 'inverse';
+  document.getElementById(inverse ? 'outInverse' : 'outDirect').checked = true;
+  buildSegBtns();
+  buildSegChecks();
+  renderAll();
+}
+
+function onOutputChange() {
+  inverse = document.getElementById('outInverse').checked;
+  buildSegBtns();
+  buildSegChecks();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SET DIGIT
+// ═══════════════════════════════════════════════════════════════════
+function setDigit(d) {
+  digit = d;
+  const lbl = HEX_LABELS[d];
+  document.getElementById('dnum').textContent = lbl;
+  document.getElementById('digitSlider').value = d;
+  document.getElementById('digitTopLbl').textContent = d + (d>=10?' ('+lbl+')':'');
+  const bits = getBits(d);
+  SNAMES.forEach((s,i) => document.getElementById('sg_'+s).classList.toggle('on', SEG_TABLE[d][i]===1));
+  document.getElementById('bitrow').innerHTML = bits.map(b=>
+    `<div class="bit ${b?'b1':'b0'}">${b}</div>`).join('');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BUILD UI ELEMENTS
+// ═══════════════════════════════════════════════════════════════════
+function buildSegBtns() {
+  document.getElementById('segBtns').innerHTML = SNAMES.map(s =>
+    `<button id="sbtn_${s}" onclick="selectSeg('${s}')" class="${s===curSeg&&schemaMode==='single'?'act':''}">${segName(s)}</button>`
+  ).join('');
+}
+
+function selectSeg(s) {
+  curSeg = s; schemaMode = 'single';
+  setSchemaMode('single');
+  buildSegBtns();
+  updateCurExprSidebar();
+  drawSchema();
+}
+
+function setSchemaMode(m) {
+  schemaMode = m;
+  document.getElementById('btnSingle').classList.toggle('act', m==='single');
+  document.getElementById('btnAll').classList.toggle('act', m==='all');
+  buildSegBtns();
+  resetView();
+}
+
+function buildSegChecks() {
+  document.getElementById('segChecks').innerHTML = SNAMES.map((s,i) => {
+    const ck = selectedSegs.includes(i);
+    return `<label class="seg-cb ${ck?'ck':''}" id="scl_${i}">
+      <input type="checkbox" ${ck?'checked':''} onchange="toggleSeg(${i},this)">${segName(s)}
+    </label>`;
+  }).join('');
+}
+
+function toggleSeg(idx, el) {
+  selectedSegs = el.checked
+    ? [...new Set([...selectedSegs,idx])].sort()
+    : selectedSegs.filter(i=>i!==idx);
+  document.getElementById(`scl_${idx}`).classList.toggle('ck', el.checked);
+  renderTruth(); renderKarnaugh(); renderExpressions();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-pane, .schema-pane').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='tabSchema') { resizeCanvas(); drawSchema(); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════════════════════════
+function renderAll() {
+  renderTruth();
+  renderKarnaugh();
+  renderExpressions();
+  renderInfo();
+  updateCurExprSidebar();
+  drawSchema();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TRUTH TABLE
+// ═══════════════════════════════════════════════════════════════════
+function renderTruth() {
+  const show = selectedSegs.length > 0 ? selectedSegs : [0,1,2,3,4,5,6];
+
+  // Mini hex display strip
+  let strip = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end">`;
+  for(let d=0;d<=15;d++){
+    const active = d===digit;
+    const hexL = HEX_LABELS[d];
+    const segs = SEG_TABLE[d];
+    const sc = 18; // mini scale
+    // build tiny SVG-like display
+    const segOn = '#ff4500', segOff = '#1a0500';
+    const col = d>=10?'var(--accent2)':'var(--accent3)';
+    strip += `<div onclick="setDigit(${d})" style="cursor:pointer;text-align:center;
+      border:1px solid ${active?'var(--accent)':'var(--border)'};border-radius:3px;padding:4px 5px;
+      background:${active?'rgba(0,212,255,0.08)':'transparent'};transition:all .12s" title="${d} = ${hexL}">
+      <svg width="${sc}" height="${sc*1.5}" style="display:block;margin:0 auto 2px">
+        ${segRect(segs,0,sc)}
+      </svg>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:${col}">${hexL}</div>
+    </div>`;
+  }
+  strip += '</div>';
+
+  let h = strip + `<table class="truth-table"><thead><tr>
+    <th>Dec</th><th>Hex</th><th>A₃</th><th>A₂</th><th>A₁</th><th>A₀</th>
+    ${show.map(i=>`<th>${segName(SNAMES[i])}</th>`).join('')}
+  </tr></thead><tbody>`;
+  for(let d=0;d<=15;d++){
+    const bits = d.toString(2).padStart(4,'0').split('');
+    const cls = d===digit?'cur':'';
+    const hexLbl = HEX_LABELS[d];
+    const hexColor = d>=10?'color:var(--accent2)':'color:var(--accent)';
+    h += `<tr class="${cls}" data-d="${d}" onclick="setDigit(${d})" style="cursor:pointer">
+      <td style="color:var(--accent);font-weight:700">${d}</td>
+      <td style="${hexColor};font-weight:700;font-size:14px">${hexLbl}</td>
+      ${bits.map(b=>`<td class="v${b}">${b}</td>`).join('')}
+      ${show.map(si=>{
+        const v = getSegVal(d,si);
+        const dv = inverse ? 1-v : v;
+        return `<td class="v${dv}">${dv}</td>`;
+      }).join('')}
+    </tr>`;
+  }
+  h += '</tbody></table>';
+  document.getElementById('truthTableContainer').innerHTML = h;
+}
+
+function segRect(segs, _unused, sc) {
+  // segs = [a,b,c,d,e,f,g]
+  const on='#ff4500', off='#1a0500';
+  const w=sc, h=sc*1.5;
+  const sw=w*0.6, sh=h*0.06, sv=h*0.36, pad=w*0.15;
+  const c = (i) => segs[i]?on:off;
+  return `
+    <rect x="${pad}" y="0" width="${sw}" height="${sh}" rx="1" fill="${c(0)}"/>
+    <rect x="${w-pad-sh}" y="${pad}" width="${sh}" height="${sv}" rx="1" fill="${c(1)}"/>
+    <rect x="${w-pad-sh}" y="${h/2+pad*0.5}" width="${sh}" height="${sv}" rx="1" fill="${c(2)}"/>
+    <rect x="${pad}" y="${h-sh}" width="${sw}" height="${sh}" rx="1" fill="${c(3)}"/>
+    <rect x="0" y="${h/2+pad*0.5}" width="${sh}" height="${sv}" rx="1" fill="${c(4)}"/>
+    <rect x="0" y="${pad}" width="${sh}" height="${sv}" rx="1" fill="${c(5)}"/>
+    <rect x="${pad}" y="${h/2-sh/2}" width="${sw}" height="${sh}" rx="1" fill="${c(6)}"/>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// KARNAUGH
+// ═══════════════════════════════════════════════════════════════════
+function renderKarnaugh() {
+  const show = selectedSegs.length > 0 ? selectedSegs : [0,1,2,3,4,5,6];
+  let h = '<div class="kmap-grid">';
+  show.forEach(si => {
+    const s = SNAMES[si];
+    h += `<div class="kmap-wrap">
+      <div class="kmap-title">Segment ${segName(s)}</div>
+      <table class="kmap"><tr>
+        <th style="font-size:8px">A₃A₂╲A₁A₀</th>
+        ${KM_COLS.map(c=>`<th>${c}</th>`).join('')}
+      </tr>`;
+    KM_ROWS.forEach((row,ri)=>{
+      h+=`<tr><th>${row}</th>`;
+      KM_COLS.forEach((_,ci)=>{
+        const d=getMinterm(ri,ci);
+        let v=getSegVal(d,si);
+        if(inverse) v=1-v;
+        const hexL = HEX_LABELS[d];
+        const cls = v===0?'k0':'k1';
+        const hexSpan = d>=10?`<span style="font-size:7px;color:var(--accent2);display:block;line-height:1">${hexL}</span>`:'';
+        h+=`<td class="${cls}" title="${hexL}(${d})">${v}${hexSpan}</td>`;
+      });
+      h+='</tr>';
+    });
+    h+='</table></div>';
+  });
+  h+='</div>';
+  document.getElementById('karnaughContainer').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPRESSIONS
+// ═══════════════════════════════════════════════════════════════════
+function renderExpressions() {
+  const show = selectedSegs.length > 0 ? selectedSegs : [0,1,2,3,4,5,6];
+  const invNote = `<em style="color:var(--accent2);font-size:10px">[complement] </em>`;
+  let h = `<div class="variant-badge">VARIANTA ${document.getElementById('varSel').value} · ${V.label} · ${V.fanin} intrări</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:14px;font-family:'Share Tech Mono',monospace">
+      Ieșiri ${inverse?'INVERSE':'DIRECTE'} &nbsp;|&nbsp; Minimizare Karnaugh pentru BCD (0–9) · combinațiile 10–15 = A,b,C,d,E,F (hex)
+    </p>`;
+
+  h += '<div class="expr-panel"><div class="sec-title" style="margin-bottom:10px">Forme Minime Conjunctive (FMC)</div>';
+  show.forEach(si=>{
+    const s=SNAMES[si];
+    const expr=inverse?invNote+FMC_STR[s]:FMC_STR[s];
+    h+=`<div class="expr-row"><span class="eseg">${segName(s)}</span><span class="eeq">=</span><span class="ebody">${formatExpr(expr)}</span></div>`;
+  });
+  h+='</div>';
+
+  h+='<div class="expr-panel" style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">Forme Minime Disjunctive (FMD)</div>';
+  show.forEach(si=>{
+    const s=SNAMES[si];
+    const expr=inverse?invNote+FMD_STR[s]:FMD_STR[s];
+    h+=`<div class="expr-row"><span class="eseg">${segName(s)}</span><span class="eeq">=</span><span class="ebody">${formatExpr(expr)}</span></div>`;
+  });
+  h+='</div>';
+  document.getElementById('exprContainer').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INFO
+// ═══════════════════════════════════════════════════════════════════
+function renderInfo() {
+  const vn = document.getElementById('varSel').value;
+  document.getElementById('infoContainer').innerHTML = `
+    <div class="variant-badge">VARIANTA ${vn}</div>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-card-lbl">Ieșiri decodificator</div><div class="info-card-val">${inverse?'INVERSE':'DIRECTE'}</div></div>
+      <div class="info-card"><div class="info-card-lbl">Baza elementelor logice</div><div class="info-card-val">${V.label}</div></div>
+      <div class="info-card"><div class="info-card-lbl">Număr de intrări</div><div class="info-card-val">${V.fanin}</div></div>
+      <div class="info-card"><div class="info-card-lbl">Minimizare</div><div class="info-card-val">Karnaugh (VK)</div></div>
+    </div>
+    <div class="expr-panel" style="max-width:580px">
+      <div class="sec-title" style="margin-bottom:10px">Ordinea îndeplinirii</div>
+      <div style="font-size:13px;line-height:2;color:var(--text)">
+        <p>a) Principiul de funcționare → <strong>Tabelul de Adevăr</strong></p>
+        <p>b) Funcții minimizate → <strong>Diagramele Karnaugh (VK)</strong></p>
+        <p>c) Convertire în baza: <strong>${V.label}</strong> cu max <strong>${V.fanin}</strong> intrări</p>
+        <p>d) Circuit în <strong>Circuit Maker</strong> din elemente DNC tipice</p>
+        <br>
+        <p style="color:var(--muted);font-size:11px">Conexiune display: <strong>${inverse?'anod comun (AC)':'catod comun (KC)'}</strong></p>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SIDEBAR CURRENT EXPRESSION
+// ═══════════════════════════════════════════════════════════════════
+function updateCurExprSidebar() {
+  const bits = getBits(digit);
+  const outVal = evalFMC(curSeg, bits);
+  const dispVal = inverse ? 1-outVal : outVal;
+  const col = dispVal ? 'var(--accent3)' : 'var(--muted)';
+  const sn = segName(curSeg);
+  const terms = FMC[curSeg];
+  const termStrs = terms.map(term=>
+    '('+term.map(t=>t.n
+      ? `<span style="text-decoration:overline;color:var(--accent2)">A${['₀','₁','₂','₃'][t.v]}</span>`
+      : `<span style="color:var(--accent3)">A${['₀','₁','₂','₃'][t.v]}</span>`
+    ).join('<span style="color:var(--muted)">+</span>')+')'
+  ).join('<span style="color:var(--muted)">·</span>');
+  document.getElementById('curExprSidebar').innerHTML =
+    `<span style="color:var(--accent)">${sn}<sub>FMC</sub></span>
+     <span style="color:var(--muted)"> = </span>
+     <span>${termStrs}</span>
+     <div style="margin-top:6px;color:${col};font-size:12px">Valoare: <strong>${dispVal}</strong></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CANVAS / SCHEMA DRAWING
+// ═══════════════════════════════════════════════════════════════════
+const SEG_COLORS = ['#00d4ff','#ff6b35','#39ff14','#ff00ff','#ffaa00','#00ffaa','#ff6699'];
+
+function resizeCanvas() {
+  const body = document.getElementById('schemaBody');
+  cv.width = body.clientWidth;
+  cv.height = body.clientHeight;
+}
+
+cv.addEventListener('mousedown', e=>{ panning=true; px0=e.clientX-tx; py0=e.clientY-ty; });
+cv.addEventListener('mousemove', e=>{ if(panning){ tx=e.clientX-px0; ty=e.clientY-py0; drawSchema(); } });
+cv.addEventListener('mouseup', ()=>panning=false);
+cv.addEventListener('mouseleave', ()=>panning=false);
+cv.addEventListener('wheel', e=>{ e.preventDefault(); doZoom(e.deltaY<0?1.12:0.89, e.clientX, e.clientY); },{passive:false});
+window.addEventListener('resize', ()=>{ resizeCanvas(); drawSchema(); });
+
+function doZoom(f, mx, my) {
+  const cx=mx??cv.width/2, cy=my??cv.height/2;
+  tx=cx-f*(cx-tx); ty=cy-f*(cy-ty);
+  sc=Math.max(0.2,Math.min(5,sc*f));
+  drawSchema();
+}
+function resetView(){ sc=1; tx=0; ty=0; drawSchema(); }
+function exportPNG(){
+  const a=document.createElement('a');
+  a.download=`schema_var${document.getElementById('varSel').value}_${schemaMode==='all'?'all':curSeg}.png`;
+  a.href=cv.toDataURL(); a.click();
+}
+
+// ── gate drawing ──
+function gOR(cx,cy,W,H,neg){
+  ctx.beginPath();
+  const lx=cx-W/2,rx=cx+W/2,ty=cy-H/2,by=cy+H/2;
+  ctx.moveTo(lx,ty);
+  ctx.quadraticCurveTo(lx+W*.28,cy,lx,by);
+  ctx.quadraticCurveTo(cx,by+H*.1,rx,cy);
+  ctx.quadraticCurveTo(cx,ty-H*.1,lx,ty);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(neg){ gBubble(rx,cy); return rx+10; }
+  return rx;
+}
+function gAND(cx,cy,W,H,neg){
+  ctx.beginPath();
+  const lx=cx-W/2,rx=cx+W/2,ty=cy-H/2,by=cy+H/2;
+  ctx.moveTo(lx,ty); ctx.lineTo(cx,ty);
+  ctx.arc(cx,cy,H/2,-Math.PI/2,Math.PI/2);
+  ctx.lineTo(lx,by); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(neg){ gBubble(rx,cy); return rx+10; }
+  return rx;
+}
+function gNOT(cx,cy,sz){
+  ctx.beginPath();
+  ctx.moveTo(cx-sz/2,cy-sz/2); ctx.lineTo(cx-sz/2,cy+sz/2); ctx.lineTo(cx+sz/2-5,cy);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  gBubble(cx+sz/2-5,cy);
+}
+function gBubble(x,y){ ctx.beginPath(); ctx.arc(x+5,y,4.5,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+
+function wline(x1,y1,x2,y2,v,dash){
+  ctx.strokeStyle=v?'#39ff14':'#2d3748'; ctx.lineWidth=v?2:1.2;
+  if(dash)ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+}
+function dot(x,y,v){ ctx.fillStyle=v?'#39ff14':'#2d3748'; ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2); ctx.fill(); }
+
+// ── draw grid ──
+function drawGrid(){
+  const W=cv.width,H=cv.height;
+  ctx.strokeStyle='#0f1525'; ctx.lineWidth=.5;
+  const gs=22*sc, ox=((tx%gs)+gs)%gs, oy=((ty%gs)+gs)%gs;
+  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+// ── single segment circuit ──
+function drawOneSeg(seg, colIdx, offX, offY) {
+  const bits = getBits(digit);
+  const terms = FMC[seg];
+  const n = terms.length;
+  const sc_color = SEG_COLORS[colIdx % SEG_COLORS.length];
+
+  const BC = [0,70,140,210];  // bus columns (A3,A2,A1,A0)
+  const NOT_Y = 45;
+  const BUS_TOP = 70;
+  const VSPACE = 64;
+  const BUS_BOT = BUS_TOP + n * VSPACE + 20;
+  const OR_X = 310, AND_X = 450, OUT_X = 560;
+  const OW = 60, OH = 28, AW = 60;
+
+  // Title
+  ctx.fillStyle = sc_color; ctx.font = 'bold 12px "Share Tech Mono"';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(`Segment: ${seg.toUpperCase()} | ${V.label} | ${inverse?'inverse':'directe'}`, 0+offX, offY-16);
+
+  // Bus headers + NOT gates
+  ['A₃','A₂','A₁','A₀'].forEach((lbl,ci)=>{
+    const bx=BC[ci]+offX, bv=bits[ci], iv=1-bv;
+    // label
+    ctx.fillStyle='#00d4ff'; ctx.font='11px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(lbl, bx, offY+NOT_Y-32);
+    // NOT gate
+    ctx.fillStyle='#0a1628'; ctx.strokeStyle='#1e6090'; ctx.lineWidth=1.5;
+    gNOT(bx, offY+NOT_Y, 16);
+    // direct bus
+    wline(bx, offY+NOT_Y-28, bx, offY+BUS_BOT, bv);
+    // inv bus (dashed, offset)
+    ctx.strokeStyle=iv?'#ff6b35':'#1a2a40'; ctx.lineWidth=iv?1.8:1;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(bx+14,offY+NOT_Y+10); ctx.lineTo(bx+14,offY+BUS_BOT); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // OR gates
+  const orYs=[], orVals=[];
+  terms.forEach((term,ti)=>{
+    const gy = offY+BUS_TOP+ti*VSPACE;
+    orYs.push(gy);
+    const ov = evalORterm(term,bits);
+    orVals.push(ov);
+    const effOv = V.negOR ? 1-ov : ov;
+
+    ctx.fillStyle='#0a1628';
+    ctx.strokeStyle=ov?sc_color:'#1e6090';
+    ctx.lineWidth=ov?2:1.5;
+    let orOut;
+    if(V.gate==='AND') orOut=gAND(OR_X+offX, gy, OW, OH, V.negOR);
+    else orOut=gOR(OR_X+offX, gy, OW, OH, V.negOR);
+
+    const gn=V.negOR?(V.gate==='AND'?'NAND':'NOR'):(V.gate==='AND'?'AND':'OR');
+    ctx.fillStyle=ov?sc_color:'#4a5568'; ctx.font='7px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(gn, OR_X+offX, gy+3);
+
+    // input wires
+    term.forEach((t,ii)=>{
+      const bx=BC[3-t.v]+offX, rv=bits[3-t.v], wv=t.n?1-rv:rv;
+      const wx=t.n?bx+14:bx;
+      const iy=gy-OH/2+4+ii*(OH/(term.length+.2));
+      const glx=OR_X+offX-OW/2;
+      ctx.strokeStyle=wv?(t.n?'#ff6b35':'#39ff14'):'#2d3748'; ctx.lineWidth=wv?1.8:1; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(wx,iy); ctx.lineTo(glx,iy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wx,Math.min(gy,iy)); ctx.lineTo(wx,Math.max(gy,iy)); ctx.stroke();
+      dot(wx, iy, wv);
+    });
+
+    // OR → AND wire
+    wline(orOut, gy, AND_X+offX-AW/2, gy, effOv);
+  });
+
+  // AND gate
+  const andY = offY+BUS_TOP+(n-1)/2*VSPACE;
+  const andH = Math.max(32,(n-1)*VSPACE+OH);
+  const fv = orVals.every(x=>x===1)?1:0;
+  const outv = inverse?1-fv:fv;
+
+  ctx.fillStyle='#0a1628';
+  ctx.strokeStyle=fv?sc_color:'#1e6090';
+  ctx.lineWidth=fv?2.5:1.5;
+  let finOut;
+  if(V.final==='OR') finOut=gOR(AND_X+offX, andY, AW, Math.min(andH,OH*1.6+18), V.negAND);
+  else finOut=gAND(AND_X+offX, andY, AW, Math.min(andH,OH*1.6+18), V.negAND);
+
+  const fn=V.negAND?(V.final==='OR'?'NOR':'NAND'):(V.final==='OR'?'OR':'AND');
+  ctx.fillStyle=fv?sc_color:'#4a5568'; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText(fn, AND_X+offX, andY+3);
+
+  // OR → AND vertical wires
+  orYs.forEach((gy,ti)=>{
+    const andIY=andY-(Math.min(andH,OH*1.6+18)/2)+5+ti*Math.max(0,(Math.min(andH,OH*1.6+18)-10)/Math.max(n-1,1));
+    wline(AND_X+offX-AW/2, gy, AND_X+offX-AW/2, andIY, V.negOR?1-orVals[ti]:orVals[ti]);
+  });
+
+  // output
+  wline(finOut, andY, OUT_X+offX, andY, outv);
+  ctx.fillStyle=outv?'rgba(57,255,20,.12)':'rgba(74,85,104,.1)';
+  ctx.strokeStyle=outv?'#39ff14':'#4a5568'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(OUT_X+offX+14,andY,12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=outv?'#39ff14':'#555'; ctx.font='bold 11px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText(outv, OUT_X+offX+14, andY+1);
+  ctx.fillStyle=sc_color; ctx.font='bold 13px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText((inverse?seg+'̄':seg)+'_FMC = '+outv, OUT_X+offX+30, andY+1);
+
+  return BUS_BOT+20;
+}
+
+// ── draw all 7 segments ──
+function drawAllSegs() {
+  const bits = getBits(digit);
+  const BC=[0,70,140,210];
+  const NOT_Y=45, BUS_TOP=70;
+  const VSPACE=56;
+  const OR_X=310, AND_X=450, OUT_X=560;
+  const OW=54, OH=24, AW=54;
+
+  const segOffsets=[];
+  let cum=0;
+  SNAMES.forEach(s=>{ segOffsets.push(cum); cum+=FMC[s].length*VSPACE+44; });
+  const TOTAL=cum;
+
+  // Bus headers
+  ['A₃','A₂','A₁','A₀'].forEach((lbl,ci)=>{
+    const bx=BC[ci], bv=bits[ci], iv=1-bv;
+    ctx.fillStyle='#00d4ff'; ctx.font='11px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(lbl, bx, NOT_Y-28);
+    ctx.fillStyle='#0a1628'; ctx.strokeStyle='#1e6090'; ctx.lineWidth=1.5;
+    gNOT(bx, NOT_Y, 16);
+    wline(bx, NOT_Y-24, bx, TOTAL+BUS_TOP, bv);
+    ctx.strokeStyle=iv?'#ff6b35':'#1a2a40'; ctx.lineWidth=iv?1.8:1;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(bx+14,NOT_Y+10); ctx.lineTo(bx+14,TOTAL+BUS_TOP); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  SNAMES.forEach((seg,si)=>{
+    const terms=FMC[seg], n=terms.length, sc_c=SEG_COLORS[si];
+    const base=segOffsets[si]+BUS_TOP;
+    const orYs=[], orVals=[];
+
+    terms.forEach((term,ti)=>{
+      const gy=base+ti*VSPACE; orYs.push(gy);
+      const ov=evalORterm(term,bits); orVals.push(ov);
+      ctx.fillStyle='#0a1628';
+      ctx.strokeStyle=ov?sc_c:'#1e6090'; ctx.lineWidth=ov?2:1.5;
+      let orOut;
+      if(V.gate==='AND') orOut=gAND(OR_X,gy,OW,OH,V.negOR);
+      else orOut=gOR(OR_X,gy,OW,OH,V.negOR);
+      const gn=V.negOR?(V.gate==='AND'?'NAND':'NOR'):(V.gate==='AND'?'AND':'OR');
+      ctx.fillStyle=ov?sc_c:'#4a5568'; ctx.font='7px "Share Tech Mono"'; ctx.textAlign='center';
+      ctx.fillText(gn,OR_X,gy+2);
+
+      term.forEach((t,ii)=>{
+        const bx=BC[3-t.v], rv=bits[3-t.v], wv=t.n?1-rv:rv;
+        const wx=t.n?bx+14:bx;
+        const iy=gy-OH/2+4+ii*(OH/(term.length+.2));
+        ctx.strokeStyle=wv?(t.n?'#ff6b35':'#39ff14'):'#2d3748'; ctx.lineWidth=wv?1.8:1; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(wx,iy); ctx.lineTo(OR_X-OW/2,iy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx,Math.min(gy,iy)); ctx.lineTo(wx,Math.max(gy,iy)); ctx.stroke();
+        dot(wx,iy,wv);
+      });
+      wline(orOut, gy, AND_X-AW/2, gy, V.negOR?1-ov:ov);
+    });
+
+    const andY=base+(n-1)/2*VSPACE;
+    const andH=Math.max(28,(n-1)*VSPACE+OH);
+    const fv=orVals.every(x=>x===1)?1:0, outv=inverse?1-fv:fv;
+    ctx.fillStyle='#0a1628'; ctx.strokeStyle=fv?sc_c:'#1e6090'; ctx.lineWidth=fv?2.5:1.5;
+    let fout;
+    if(V.final==='OR') fout=gOR(AND_X,andY,AW,Math.min(andH,OH*1.5+16),V.negAND);
+    else fout=gAND(AND_X,andY,AW,Math.min(andH,OH*1.5+16),V.negAND);
+    const fn=V.negAND?(V.final==='OR'?'NOR':'NAND'):(V.final==='OR'?'OR':'AND');
+    ctx.fillStyle=fv?sc_c:'#4a5568'; ctx.font='7px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(fn,AND_X,andY+2);
+
+    orYs.forEach((gy,ti)=>{
+      const aiy=andY-(Math.min(andH,OH*1.5+16)/2)+4+ti*Math.max(0,(Math.min(andH,OH*1.5+16)-8)/Math.max(n-1,1));
+      wline(AND_X-AW/2,gy,AND_X-AW/2,aiy,V.negOR?1-orVals[ti]:orVals[ti]);
+    });
+
+    wline(fout,andY,OUT_X,andY,outv);
+    ctx.fillStyle=outv?'rgba(57,255,20,.12)':'rgba(74,85,104,.1)';
+    ctx.strokeStyle=outv?'#39ff14':'#4a5568'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(OUT_X+12,andY,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=outv?'#39ff14':'#555'; ctx.font='bold 10px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(outv,OUT_X+12,andY+1);
+    ctx.fillStyle=sc_c; ctx.font='bold 11px "Share Tech Mono"'; ctx.textAlign='left';
+    ctx.fillText((inverse?seg+'̄':seg)+'_FMC='+outv, OUT_X+26, andY+1);
+
+    // sep line
+    ctx.strokeStyle='#111a28'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+    const sy=base+n*VSPACE+16;
+    ctx.beginPath(); ctx.moveTo(-20,sy); ctx.lineTo(640,sy); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+}
+
+// ── main draw ──
+function drawSchema() {
+  if(!document.getElementById('tabSchema').classList.contains('active')) return;
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#070b15'; ctx.fillRect(0,0,W,H);
+  drawGrid();
+
+  ctx.save();
+  ctx.translate(tx+50, ty+40);
+  ctx.scale(sc,sc);
+  ctx.textBaseline='middle';
+
+  if(schemaMode==='single') drawOneSeg(curSeg, SNAMES.indexOf(curSeg), 0, 0);
+  else drawAllSegs();
+
+  // Legend
+  ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillStyle='#39ff14'; ctx.fillText('━ сигнал 1 (активен)', 0, -20);
+  ctx.fillStyle='#2d3748'; ctx.fillText('━ сигнал 0', 180, -20);
+  ctx.fillStyle='#ff6b35'; ctx.fillText('╍ инверсный (NOT)', 330, -20);
+
+  ctx.restore();
+  document.getElementById('zinfo').textContent=`zoom: ${Math.round(sc*100)}% | перетащить | колесо = zoom`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('outDirect').checked = true;
+buildSegBtns();
+buildSegChecks();
+renderAll();
+resizeCanvas();
+
+// Make schema tab aware of resize
+new ResizeObserver(()=>{ resizeCanvas(); drawSchema(); })
+  .observe(document.getElementById('schemaBody'));
+</script>
+</body>
+</html>

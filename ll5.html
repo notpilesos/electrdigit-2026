@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LL5. Registre | ED 2026</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ HEADER -->
+<header>
+  <div class="hdr-logo">UTM · FCIM · ED 2026</div>
+  <h1>LL5. <span>Registre</span></h1>
+  <div class="hdr-right">
+    <select id="varSel" onchange="applyVariant()">
+      <option value="4">Varianta 4</option>
+    </select>
+    <span class="clbl" id="varinfo">7 biți · JK · dir. · ȘI,NU(2)</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════ CTRL BAR (TABS) -->
+<div class="ctrl-bar">
+  <span class="clbl">SECȚIUNE:</span>
+  <div class="tabs" style="border:none;padding:0;background:transparent;">
+    <button class="tab active" onclick="showTab('tabScop',this)">01 · Scop</button>
+    <button class="tab" onclick="showTab('tabOrdine',this)">02 · Ordine</button>
+    <button class="tab" onclick="showTab('tabDate',this)">03 · Date</button>
+    <button class="tab" onclick="showTab('tabControl',this)">04 · Control</button>
+    <button class="tab" onclick="showTab('tabBiblio',this)">05 · Bibliografie</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ BODY -->
+<div class="app-body">
+
+  <!-- ─── SIDEBAR ─── -->
+  <div class="sidebar">
+
+    <div>
+      <div class="sec-title">Varianta 4</div>
+      <div class="circuit-preview">
+        <div class="io-lines" style="width:100%;">
+          <div class="io-line">
+            <div class="io-dot active"></div>
+            <span>Var.</span>
+            <span style="margin-left:auto;color:var(--accent);font-weight:700;">4</span>
+          </div>
+          <div class="io-line">
+            <div class="io-dot active"></div>
+            <span>Număr biți</span>
+            <span style="margin-left:auto;color:var(--accent);font-weight:700;">7</span>
+          </div>
+          <div class="io-line">
+            <div class="io-dot active"></div>
+            <span>Bistabil</span>
+            <span style="margin-left:auto;color:var(--accent2);font-weight:700;">JK</span>
+          </div>
+          <div class="io-line">
+            <div class="io-dot active"></div>
+            <span>Intr. bist.</span>
+            <span style="margin-left:auto;color:var(--accent3);font-weight:700;">dir.</span>
+          </div>
+          <div class="io-line">
+            <div class="io-dot inactive"></div>
+            <span>Elem. logice</span>
+            <span style="margin-left:auto;color:var(--accent4);font-weight:700;">ȘI, NU</span>
+          </div>
+          <div class="io-line">
+            <div class="io-dot inactive"></div>
+            <span>Nr. intr. el.</span>
+            <span style="margin-left:auto;color:var(--accent);font-weight:700;">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Tip registru</div>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="regType" value="serie" checked onchange="drawSchema()">
+          Registru serie
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="regType" value="paralel" onchange="drawSchema()">
+          Registru paralel
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="regType" value="universal" onchange="drawSchema()">
+          Registru universal
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Stare Q₆…Q₀</div>
+      <div class="dnum" id="regState">0000000</div>
+      <div class="addr-row" style="margin-top:6px;" id="bitRow">
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+        <div class="addr-bit b0">0</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Control</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button onclick="shiftLeft()">◀ Shift L</button>
+        <button onclick="shiftRight()">Shift R ▶</button>
+        <button onclick="loadWord()">Load ↓</button>
+        <button onclick="resetReg()">Reset</button>
+      </div>
+      <div style="margin-top:8px;">
+        <div class="clbl" style="margin-bottom:4px;">DIN (serial):</div>
+        <div class="addr-row">
+          <div class="addr-bit b1" id="din">1</div>
+        </div>
+        <input type="range" min="0" max="1" value="1" id="dinSlider"
+               oninput="document.getElementById('din').textContent=this.value;document.getElementById('din').className='addr-bit '+(this.value==='1'?'b1':'b0')">
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ─── CONTENT ─── -->
+  <div class="content">
+
+    <!-- ══ TAB 01: SCOP ══ -->
+    <div class="tab-pane active" id="tabScop">
+
+      <div class="variant-badge">LL5 · REGISTRE · VARIANTA 4</div>
+
+      <div class="expr-panel">
+        <div class="sec-title">Scopul lucrării</div>
+        <div class="expr-row" style="border-bottom:none;">
+          <span class="ebody">
+            Studierea registrelor
+            <span class="var">serie</span>,
+            <span style="color:var(--accent2);">paralele</span> și
+            <span style="color:var(--accent4);">universale</span>.
+            Se analizează principiile de funcționare, diagramele de timp
+            și schemele logice ale fiecărui tip de registru conform variantei individuale
+            pe baza bistabilelor <span class="var">JK</span> cu intrări directe,
+            folosind elemente logice <span style="color:var(--accent4);">ȘI</span> și
+            <span style="color:var(--accent2);">NU</span> cu 2 intrări.
+          </span>
+        </div>
+      </div>
+
+      <div class="info-grid" style="max-width:720px;grid-template-columns:1fr 1fr 1fr;">
+        <div class="info-card">
+          <div class="info-card-lbl">Registru serie</div>
+          <div class="info-card-val" style="color:var(--accent);">SISO</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">N impulsuri CLK pentru N biți</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Registru paralel</div>
+          <div class="info-card-val" style="color:var(--accent2);">PIPO</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">1 impuls CLK pentru toți N biți</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-lbl">Registru universal</div>
+          <div class="info-card-val" style="color:var(--accent4);">SIPO/PISO</div>
+          <div class="clbl" style="margin-top:6px;font-size:9px;">Shift L/R + Load/Read paralel</div>
+        </div>
+      </div>
+
+    </div><!-- /tabScop -->
+
+    <!-- ══ TAB 02: ORDINE ══ -->
+    <div class="tab-pane" id="tabOrdine">
+
+      <div class="variant-badge">ORDINEA ÎNDEPLINIRII</div>
+
+      <div class="expr-panel">
+        <div class="sec-title">Pași de lucru</div>
+
+        <div class="expr-row">
+          <span class="eseg">01</span>
+          <span class="eeq">→</span>
+          <span class="ebody">Se realizează schema
+            <span class="var">registrului serie</span>
+            conform variantei (7 biți, JK, intrări directe, ȘI-NU cu fan-in 2).
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--accent2);">02</span>
+          <span class="eeq">→</span>
+          <span class="ebody">Se realizează schema
+            <span style="color:var(--accent2);">registrului paralel</span>
+            conform variantei.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--accent4);">03</span>
+          <span class="eeq">→</span>
+          <span class="ebody">Se realizează schema
+            <span style="color:var(--accent4);">registrului universal</span>
+            conform variantei.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--accent3);">04</span>
+          <span class="eeq">→</span>
+          <span class="ebody">Se realizează în programa
+            <a href="https://moodle.utm.md/mod/resource/view.php?id=31941"
+               style="color:var(--accent);text-decoration:none;" target="_blank">
+              Circuit Maker ↗
+            </a>
+            schema logică a registrelor.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);">05</span>
+          <span class="eeq">→</span>
+          <span class="ebody">Se va realiza darea de seamă cu includerea rezultatelor obținute.</span>
+        </div>
+
+      </div>
+    </div><!-- /tabOrdine -->
+
+    <!-- ══ TAB 03: DATE ══ -->
+    <div class="tab-pane" id="tabDate">
+
+      <div class="variant-badge">TABELUL 1 · DATE PENTRU LUCRARE</div>
+
+      <div class="tables-row">
+        <table class="truth-table" style="max-width:380px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Parametru</th>
+              <th>Valoare</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:left;">Var.</td>
+              <td class="v1">4</td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color:var(--accent);">Număr. de biți</td>
+              <td class="v1">7</td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color:var(--accent2);">Bistabil</td>
+              <td style="color:var(--accent2);font-weight:700;">JK</td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color:var(--accent3);">Intr. bist.</td>
+              <td style="color:var(--accent3);">dir.</td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color:var(--accent4);">Elemente logice</td>
+              <td style="color:var(--accent4);">ȘI, NU</td>
+            </tr>
+            <tr>
+              <td style="text-align:left;">Num. intr. elem. logice</td>
+              <td class="v1">2</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TRUTH TABLES -->
+      <div class="tables-row" style="margin-top:22px;align-items:flex-start;flex-wrap:wrap;gap:24px;">
+
+        <!-- JK bistabil truth table -->
+        <div>
+          <div class="sec-title" style="margin-bottom:8px;">Tabelul 2 · Bistabil JK — tabel de adevăr</div>
+          <table class="truth-table" style="min-width:320px;">
+            <thead>
+              <tr>
+                <th>J</th><th>K</th><th>Qₙ</th><th>Qₙ₊₁</th><th>Operație</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="v0">0</td><td class="v0">0</td><td class="vx">Q</td><td class="vx">Q</td><td style="text-align:left;color:var(--muted);padding-left:10px;">Menținere</td></tr>
+              <tr><td class="v0">0</td><td class="v1">1</td><td class="vx">Q</td><td class="v0">0</td><td style="text-align:left;color:var(--accent2);padding-left:10px;">Resetare</td></tr>
+              <tr><td class="v1">1</td><td class="v0">0</td><td class="vx">Q</td><td class="v1">1</td><td style="text-align:left;color:var(--accent3);padding-left:10px;">Setare</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td class="v0">0</td><td class="v1">1</td><td style="text-align:left;color:var(--accent4);padding-left:10px;">Comutare ↑</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td class="v1">1</td><td class="v0">0</td><td style="text-align:left;color:var(--accent4);padding-left:10px;">Comutare ↓</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Registru serie shift table -->
+        <div>
+          <div class="sec-title" style="margin-bottom:8px;">Tabelul 3 · Registru serie — tranziții (Din=1)</div>
+          <table class="truth-table" style="min-width:380px;">
+            <thead>
+              <tr>
+                <th>CLK</th><th>Din</th><th>Q₆</th><th>Q₅</th><th>Q₄</th><th>Q₃</th><th>Q₂</th><th>Q₁</th><th>Q₀</th>
+              </tr>
+            </thead>
+            <tbody id="tblSerie">
+              <!-- generated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Universal mode table -->
+        <div>
+          <div class="sec-title" style="margin-bottom:8px;">Tabelul 4 · Registru universal — moduri</div>
+          <table class="truth-table" style="min-width:300px;">
+            <thead>
+              <tr><th>S₁</th><th>S₀</th><th>Mod</th><th>Operație</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="v0">0</td><td class="v0">0</td><td style="color:var(--muted);">Hold</td><td style="text-align:left;color:var(--muted);padding-left:10px;">Menținere stare</td></tr>
+              <tr><td class="v0">0</td><td class="v1">1</td><td style="color:var(--accent2);">Shift R</td><td style="text-align:left;color:var(--accent2);padding-left:10px;">Deplasare dreapta</td></tr>
+              <tr><td class="v1">1</td><td class="v0">0</td><td style="color:var(--accent);">Shift L</td><td style="text-align:left;color:var(--accent);padding-left:10px;">Deplasare stânga</td></tr>
+              <tr><td class="v1">1</td><td class="v1">1</td><td style="color:var(--accent3);">Load</td><td style="text-align:left;color:var(--accent3);padding-left:10px;">Încărcare paralelă</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /tables-row -->
+
+      <!-- Schema canvas -->
+      <div style="margin-top:22px;">
+        <div class="sec-title" style="margin-bottom:10px;" id="schemaTitle">Schema registrului serie — 7 biți JK</div>
+        <canvas id="cvSchema" width="820" height="200"
+          style="border:1px solid var(--border);border-radius:4px;background:#070b15;max-width:100%;display:block;">
+        </canvas>
+        <div style="margin-top:8px;">
+          <button onclick="exportPNG()">⬇ Export PNG</button>
+        </div>
+      </div>
+
+    </div><!-- /tabDate -->
+
+    <!-- ══ TAB 04: CONTROL ══ -->
+    <div class="tab-pane" id="tabControl">
+
+      <div class="variant-badge">ÎNTREBĂRI DE CONTROL</div>
+
+      <div class="expr-panel">
+
+        <div class="expr-row">
+          <span class="eseg">Q1</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Clasificarea registrelor.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          După modul de transfer:
+          <span style="color:var(--accent);">serie-serie (SISO)</span>,
+          <span style="color:var(--accent2);">paralel-paralel (PIPO)</span>,
+          <span style="color:var(--accent3);">serie-paralel (SIPO)</span>,
+          <span style="color:var(--accent4);">paralel-serie (PISO)</span>
+          și <span style="color:#fff;">universale</span>.
+          După direcția shiftului: unidirecționale și bidirecționale.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Q2</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Principiile de funcționare ale registrelor.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          Un registru este format din <span style="color:var(--accent);">N bistabile JK</span> conectate în cascadă.
+          La frontul activ al <span style="color:var(--accent3);">CLK</span>, starea fiecărui bistabil
+          se actualizează conform intrărilor J și K:
+          J=1,K=0 → Setare; J=0,K=1 → Resetare; J=K=1 → Comutare; J=K=0 → Menținere.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Q3</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Explicați diagramele în timp ale registrelor serie și paralele.</span>
+        </div>
+        <div style="padding:6px 0 12px 56px;font-size:12px;line-height:1.8;color:var(--muted);border-bottom:1px solid rgba(30,58,95,.4);">
+          <span style="color:var(--accent);">Serie:</span> la fiecare CLK bitul de la intrare
+          se deplasează un rang spre dreapta — sunt necesare 7 impulsuri pentru a încărca 7 biți.
+          <span style="color:var(--accent2);">Paralel:</span> la un singur CLK toți cei 7 biți
+          sunt capturați simultan; diagramele de timp arată tranziție sincronă pe toate ieșirile Q₀…Q₆.
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg">Q4</span>
+          <span class="eeq">—</span>
+          <span class="ebody">Demonstrați funcționalitatea registrelor realizate.</span>
+        </div>
+        <div style="padding:6px 0 4px 56px;font-size:12px;line-height:1.8;color:var(--muted);">
+          Se aplică semnalele CLK în
+          <span style="color:var(--accent);">Circuit Maker</span>
+          și se observă evoluția ieșirilor Q₀…Q₆,
+          verificând concordanța cu tabelele de adevăr și diagramele de timp teoretice
+          ale bistabilului <span style="color:var(--accent2);">JK</span> cu intrări directe.
+        </div>
+
+      </div>
+    </div><!-- /tabControl -->
+
+    <!-- ══ TAB 05: BIBLIOGRAFIE ══ -->
+    <div class="tab-pane" id="tabBiblio">
+
+      <div class="variant-badge">BIBLIOGRAFIE</div>
+
+      <div class="expr-panel">
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[1]</span>
+          <span class="ebody">
+            Anatol Alexei —
+            <span class="var">Note de curs „Electronica digitală"</span>.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[2]</span>
+          <span class="ebody">
+            Gheorghe Toacșe, Dan Nicula —
+            <span style="color:var(--accent2);">„Electronica digitală"</span>,
+            Editura tehnică, București, 2005.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[3]</span>
+          <span class="ebody">
+            John Wakerly —
+            <span style="color:var(--accent3);">„Circuite digitale: principii și practice folosite în proiectare"</span>,
+            Teora, București, 2002.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[4]</span>
+          <span class="ebody">
+            Mihaela Lupea, Andreea Mihiș —
+            <span style="color:var(--accent4);">„Logici clasice și circuite logice"</span>,
+            Editura albastră, Cluj-Napoca, 2008.
+          </span>
+        </div>
+
+        <div class="expr-row">
+          <span class="eseg" style="color:var(--muted);font-size:11px;">[5]</span>
+          <span class="ebody">
+            I. Spânulescu, S. Spânulescu —
+            <span class="var">„Circuite integrate digitale și sisteme cu microprocesoare"</span>,
+            Editura Victor, București, 1996.
+          </span>
+        </div>
+
+      </div>
+    </div><!-- /tabBiblio -->
+
+  </div><!-- /content -->
+</div><!-- /app-body -->
+
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const N = 7;
+let bits = new Array(N).fill(0); // Q0..Q6, index 0 = Q0
+
+// ════════════════════════════════════════════
+//  SIDEBAR CONTROLS
+// ════════════════════════════════════════════
+function renderState() {
+  document.getElementById('regState').textContent = [...bits].reverse().join('');
+  const row = document.getElementById('bitRow');
+  row.innerHTML = '';
+  for (let i = N-1; i >= 0; i--) {
+    const d = document.createElement('div');
+    d.className = 'addr-bit ' + (bits[i] ? 'b1' : 'b0');
+    d.textContent = bits[i];
+    row.appendChild(d);
+  }
+  drawSchema();
+  buildSerieTable();
+}
+
+function getType() {
+  return document.querySelector('input[name="regType"]:checked').value;
+}
+
+function shiftLeft() {
+  // serie: Din → Q0, Q0→Q1, …, Q5→Q6 (shift right in array = data moves left visually)
+  const din = parseInt(document.getElementById('dinSlider').value);
+  bits = [din, ...bits.slice(0, N-1)];
+  renderState();
+}
+function shiftRight() {
+  const din = parseInt(document.getElementById('dinSlider').value);
+  bits = [...bits.slice(1), din];
+  renderState();
+}
+function loadWord() {
+  // parallel load — all bits at once
+  bits = [1, 0, 1, 1, 0, 1, 0];
+  renderState();
+}
+function resetReg() {
+  bits = new Array(N).fill(0);
+  renderState();
+}
+
+// ════════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tabDate') { drawSchema(); buildSerieTable(); }
+}
+
+// ════════════════════════════════════════════
+//  DRAW ROUTER — called on radio change too
+// ════════════════════════════════════════════
+function drawSchema() {
+  const type = getType();
+  const titles = {
+    serie:     'Schema registrului SERIE (SISO) — 7 biți JK · intrări directe',
+    paralel:   'Schema registrului PARALEL (PIPO) — 7 biți JK · intrări directe',
+    universal: 'Schema registrului UNIVERSAL — 7 biți JK · Shift L/R + Load/Read'
+  };
+  const el = document.getElementById('schemaTitle');
+  if (el) el.textContent = titles[type];
+
+  if (type === 'serie')     drawSerie();
+  else if (type === 'paralel')   drawParalel();
+  else                           drawUniversal();
+}
+
+// ════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════
+function prepCanvas() {
+  const cv = document.getElementById('cvSchema');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#070b15';
+  ctx.fillRect(0, 0, W, H);
+  // dot grid
+  ctx.fillStyle = 'rgba(30,58,95,0.25)';
+  for (let x = 10; x < W; x += 20)
+    for (let y = 10; y < H; y += 20)
+      ctx.fillRect(x, y, 1, 1);
+  return { cv, ctx, W, H };
+}
+
+function arrow(ctx, x1, y1, x2, y2, color, size=5) {
+  const angle = Math.atan2(y2-y1, x2-x1);
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - size*Math.cos(angle-0.4), y2 - size*Math.sin(angle-0.4));
+  ctx.lineTo(x2 - size*Math.cos(angle+0.4), y2 - size*Math.sin(angle+0.4));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawBox(ctx, x, y, bw, bh, q, label, sub) {
+  ctx.strokeStyle = q ? '#39ff14' : '#1e3a5f';
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = q ? 'rgba(57,255,20,0.08)' : 'rgba(17,24,39,0.9)';
+  ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 3); ctx.fill(); ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4a5568'; ctx.font = '8px "Share Tech Mono"';
+  ctx.fillText('BISTABIL', x + bw/2, y + 13);
+
+  ctx.fillStyle = q ? '#39ff14' : '#4a5568';
+  ctx.font = 'bold 12px "Share Tech Mono"';
+  ctx.fillText(label, x + bw/2, y + 30);
+
+  ctx.fillStyle = q ? '#39ff14' : '#4a5568';
+  ctx.font = '9px "Share Tech Mono"';
+  ctx.fillText(sub, x + bw/2, y + 46);
+}
+
+function clkBus(ctx, W, startX, totalW, clkY) {
+  ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(startX-20, clkY); ctx.lineTo(startX+totalW+20, clkY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#4a5568'; ctx.font = '8px "Share Tech Mono"'; ctx.textAlign = 'left';
+  ctx.fillText('CLK ►', startX - 40, clkY + 3);
+}
+
+function legend(ctx, H, entries) {
+  let lx = 6;
+  entries.forEach(([color, text]) => {
+    ctx.fillStyle = color; ctx.font = '8px "Share Tech Mono"'; ctx.textAlign = 'left';
+    ctx.fillText(text, lx, H - 6);
+    lx += ctx.measureText(text).width + 14;
+  });
+}
+
+// ════════════════════════════════════════════
+//  DRAW SERIE
+// ════════════════════════════════════════════
+function drawSerie() {
+  const { cv, ctx, W, H } = prepCanvas();
+  const bw = 82, bh = 60, gap = 14;
+  const totalW = N*bw + (N-1)*gap;
+  const startX = (W - totalW) / 2;
+  const startY = 20;
+  const clkY = startY + bh + 18;
+
+  clkBus(ctx, W, startX, totalW, clkY);
+
+  // Din arrow
+  arrow(ctx, startX-44, startY+bh/2, startX-1, startY+bh/2, '#00d4ff');
+  ctx.fillStyle='#00d4ff'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText('Din', startX-52, startY+bh/2-6);
+
+  for (let i = 0; i < N; i++) {
+    const x = startX + i*(bw+gap);
+    const q = bits[N-1-i]; // Q6 leftmost
+
+    // wire to next cell
+    if (i < N-1) {
+      arrow(ctx, x+bw, startY+bh/2, x+bw+gap, startY+bh/2, q ? '#39ff14' : '#1e3a5f');
+    }
+
+    // CLK tick
+    ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x+bw/2, startY+bh); ctx.lineTo(x+bw/2, clkY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawBox(ctx, x, startY, bw, bh, q, 'JK', `Q${N-1-i}=${q}`);
+
+    // J / K pin labels
+    ctx.fillStyle='#4a5568'; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='right';
+    ctx.fillText('J', x-3, startY+bh/2-6);
+    ctx.fillText('K', x-3, startY+bh/2+10);
+  }
+
+  // Dout arrow
+  const lastX = startX+(N-1)*(bw+gap)+bw;
+  arrow(ctx, lastX, startY+bh/2, lastX+44, startY+bh/2, '#bf5fff');
+  ctx.fillStyle='#bf5fff'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText('Dout', lastX+46, startY+bh/2+4);
+
+  // Mode label
+  ctx.fillStyle='#00d4ff'; ctx.font='bold 9px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText('MODE: SERIE-SERIE (SISO) — date intră/ies bit cu bit la fiecare CLK', W/2, clkY+16);
+
+  legend(ctx, H, [['#39ff14','■ Q=1'],['#1e3a5f','■ Q=0'],['#00d4ff','► Din (serial)'],['#bf5fff','► Dout (serial)'],['#1e3a5f','╌ CLK bus']]);
+}
+
+// ════════════════════════════════════════════
+//  DRAW PARALEL
+// ════════════════════════════════════════════
+function drawParalel() {
+  const { cv, ctx, W, H } = prepCanvas();
+  const bw = 82, bh = 68, gap = 14;
+  const totalW = N*bw + (N-1)*gap;
+  const startX = (W - totalW) / 2;
+  const startY = 52; // extra space above for parallel D inputs
+  const clkY = startY + bh + 18;
+
+  clkBus(ctx, W, startX, totalW, clkY);
+
+  const dColors = ['#00d4ff','#ff6b35','#39ff14','#bf5fff','#00d4ff','#ff6b35','#39ff14'];
+
+  for (let i = 0; i < N; i++) {
+    const x = startX + i*(bw+gap);
+    const qi = N-1-i; // Q6 leftmost
+    const q = bits[qi];
+    const col = dColors[qi];
+
+    // Parallel D input line from top
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x+bw/2, 8); ctx.lineTo(x+bw/2, startY); ctx.stroke();
+    ctx.setLineDash([]);
+    // D label at top
+    ctx.fillStyle = col; ctx.font = '9px "Share Tech Mono"'; ctx.textAlign = 'center';
+    ctx.fillText(`D${qi}`, x+bw/2, 7);
+    // arrowhead into box top
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x+bw/2, startY);
+    ctx.lineTo(x+bw/2-4, startY-8);
+    ctx.lineTo(x+bw/2+4, startY-8);
+    ctx.closePath(); ctx.fill();
+
+    // CLK tick
+    ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x+bw/2, startY+bh); ctx.lineTo(x+bw/2, clkY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawBox(ctx, x, startY, bw, bh, q, 'JK', `Q${qi}=${q}`);
+
+    // Parallel Q output line going down
+    const qCol = q ? '#39ff14' : '#4a5568';
+    ctx.strokeStyle = qCol; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x+bw/2, startY+bh); ctx.lineTo(x+bw/2, clkY-2); ctx.stroke();
+
+    // J / K labels
+    ctx.fillStyle='#4a5568'; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='right';
+    ctx.fillText('J', x-3, startY+bh/2-6);
+    ctx.fillText('K', x-3, startY+bh/2+10);
+  }
+
+  // Note: no serial connection between cells in parallel register
+  ctx.fillStyle='#ff6b35'; ctx.font='bold 9px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText('MODE: PARALEL-PARALEL (PIPO) — toți biții D₀…D₆ intră/ies simultan la un CLK', W/2, clkY+16);
+
+  legend(ctx, H, [['#39ff14','■ Q=1'],['#4a5568','■ Q=0'],['#00d4ff','D₀'],['#ff6b35','D₁'],['#39ff14','D₂'],['#bf5fff','D₃'],['#1e3a5f','╌ CLK']]);
+}
+
+// ════════════════════════════════════════════
+//  DRAW UNIVERSAL
+// ════════════════════════════════════════════
+function drawUniversal() {
+  const { cv, ctx, W, H } = prepCanvas();
+  const bw = 82, bh = 72, gap = 14;
+  const totalW = N*bw + (N-1)*gap;
+  const startX = (W - totalW) / 2;
+  const startY = 56;
+  const clkY = startY + bh + 18;
+
+  clkBus(ctx, W, startX, totalW, clkY);
+
+  // S1 S0 control bus
+  ctx.strokeStyle='#bf5fff'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(startX-20,14); ctx.lineTo(startX+totalW+20,14); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#bf5fff'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText('S₁S₀ MODE BUS: 00=Hold  01=ShiftR  10=ShiftL  11=Load', startX-18, 12);
+
+  // Din-L and Din-R
+  arrow(ctx, startX-44, startY+bh/2-8, startX-1, startY+bh/2-8, '#00d4ff');
+  ctx.fillStyle='#00d4ff'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='right';
+  ctx.fillText('DinL', startX-46, startY+bh/2-10);
+
+  const lastXa = startX+(N-1)*(bw+gap)+bw;
+  arrow(ctx, lastXa+44, startY+bh/2+8, lastXa+1, startY+bh/2+8, '#ff6b35');
+  ctx.fillStyle='#ff6b35'; ctx.font='9px "Share Tech Mono"'; ctx.textAlign='left';
+  ctx.fillText('DinR', lastXa+46, startY+bh/2+6);
+
+  for (let i = 0; i < N; i++) {
+    const x = startX + i*(bw+gap);
+    const qi = N-1-i;
+    const q = bits[qi];
+
+    // Parallel D input (small tick from top)
+    ctx.strokeStyle='#4a5568'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+    ctx.beginPath(); ctx.moveTo(x+bw/2, 18); ctx.lineTo(x+bw/2, startY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#4a5568'; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='center';
+    ctx.fillText(`D${qi}`, x+bw/2, 17);
+
+    // S1S0 tick
+    ctx.strokeStyle='#bf5fff'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
+    ctx.beginPath(); ctx.moveTo(x+bw*0.75, 14); ctx.lineTo(x+bw*0.75, startY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Serial shift wires (between cells)
+    if (i < N-1) {
+      // ShiftL: Q→ right neighbor
+      arrow(ctx, x+bw, startY+bh/2-8, x+bw+gap, startY+bh/2-8, q ? '#00d4ff' : '#1e3a5f');
+      // ShiftR: ← from right neighbor
+      ctx.strokeStyle='#ff6b35'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+      ctx.beginPath(); ctx.moveTo(x+bw+gap, startY+bh/2+8); ctx.lineTo(x+bw, startY+bh/2+8); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // CLK tick
+    ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x+bw/2, startY+bh); ctx.lineTo(x+bw/2, clkY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawBox(ctx, x, startY, bw, bh, q, 'JK', `Q${qi}=${q}`);
+
+    ctx.fillStyle='#4a5568'; ctx.font='8px "Share Tech Mono"'; ctx.textAlign='right';
+    ctx.fillText('J', x-3, startY+bh/2-6);
+    ctx.fillText('K', x-3, startY+bh/2+10);
+  }
+
+  // Mode indicator
+  ctx.fillStyle='#bf5fff'; ctx.font='bold 9px "Share Tech Mono"'; ctx.textAlign='center';
+  ctx.fillText('MODE: UNIVERSAL — ShiftL (S₁S₀=10) · ShiftR (01) · Load paralel (11) · Hold (00)', W/2, clkY+16);
+
+  legend(ctx, H, [['#39ff14','■ Q=1'],['#1e3a5f','■ Q=0'],['#00d4ff','► ShiftL'],['#ff6b35','◄ ShiftR'],['#4a5568','╌ D parallel'],['#bf5fff','╌ S₁S₀']]);
+}
+
+// ════════════════════════════════════════════
+//  SERIE SHIFT TABLE — generate 8 CLK steps
+// ════════════════════════════════════════════
+function buildSerieTable() {
+  const tbody = document.getElementById('tblSerie');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  // simulate independently: start from 0000000, Din=1 each step
+  let state = [0,0,0,0,0,0,0]; // Q6..Q0 order
+  const curState = [...bits].reverse().join(''); // current register for highlight
+
+  // row 0: initial state before any CLK
+  const addRow = (clkLabel, dinLabel, s, highlight) => {
+    const tr = document.createElement('tr');
+    if (highlight) tr.className = 'cur';
+    const vals = [clkLabel, dinLabel, ...s];
+    vals.forEach((v, ci) => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      if (ci >= 2) td.className = v==='1'?'v1':'v0';
+      if (ci === 1 && v==='1') td.className = 'v1';
+      if (ci === 1 && v==='0') td.className = 'v0';
+      if (v === '—') { td.className = ''; td.style.color = 'var(--muted)'; }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  };
+
+  addRow('0 (init)', '—', state, state.join('') === curState);
+
+  for (let clk = 1; clk <= 8; clk++) {
+    const din = clk <= 7 ? 1 : 0;
+    // Din → Q0, Q0→Q1, …, Q5→Q6  (shift left in array: append din at end = Q0 side)
+    // state array is [Q6, Q5, Q4, Q3, Q2, Q1, Q0]
+    state = [...state.slice(1), din];
+    addRow(clk.toString(), din.toString(), state, state.join('') === curState);
+  }
+}
+
+// ════════════════════════════════════════════
+//  EXPORT PNG
+// ════════════════════════════════════════════
+function exportPNG() {
+  const cv = document.getElementById('cvSchema');
+  const type = getType();
+  const names = { serie: 'registru_serie', paralel: 'registru_paralel', universal: 'registru_universal' };
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = `LL5_${names[type]}_var4.png`;
+  a.click();
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+function applyVariant() { renderState(); }
+applyVariant();
+</script>
+</body>
+</html>

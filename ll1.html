@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LL1. Eroare 404 | Semnal Pierdut</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      overflow-y: auto !important;
+      height: auto !important;
+    }
+    /* Unique styling for the 404 screen glitch and vibes */
+    .err-container {
+      max-width: 800px;
+      margin: 80px auto;
+      padding: 30px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .err-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent4));
+    }
+    .glitch-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 80px;
+      font-weight: 900;
+      color: var(--accent2);
+      text-align: center;
+      letter-spacing: 5px;
+      margin-bottom: 10px;
+      position: relative;
+      text-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+      animation: noise 3s infinite linear alternate-reverse;
+    }
+    .glitch-subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 16px;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+    .terminal-window {
+      background: #050a12;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.8;
+      margin-bottom: 30px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(30, 58, 95, 0.4);
+    }
+    .term-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .term-dot.r { background: #ff5f56; }
+    .term-dot.y { background: #ffbd2e; }
+    .term-dot.g { background: #27c93f; }
+    .term-title {
+      font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-left: 10px;
+    }
+    .term-line {
+      display: flex; gap: 10px; margin-bottom: 6px;
+    }
+    .term-line .prompt { color: var(--accent3); }
+    .term-line .error-text { color: var(--accent2); font-weight: bold; }
+    .term-line .success-text { color: var(--accent3); }
+    
+    .btn-row {
+      display: flex; gap: 15px; justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cyber-btn {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      padding: 10px 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .cyber-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+      transform: translateY(-1px);
+    }
+    .cyber-btn.primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: bold;
+    }
+    .cyber-btn.primary:hover {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    @keyframes noise {
+      0% { clip-path: inset(40% 0 61% 0); }
+      20% { clip-path: inset(92% 0 1% 0); }
+      40% { clip-path: inset(25% 0 58% 0); }
+      60% { clip-path: inset(76% 0 5% 0); }
+      80% { clip-path: inset(3% 0 81% 0); }
+      100% { clip-path: inset(50% 0 30% 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header style="flex-shrink: 0; position: static;">
+    <div class="hdr-logo">UTM · FCIM · CD 2026</div>
+    <h1 style="font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px;">
+      LL1 · <span>Semnal Pierdut</span>
+    </h1>
+    <div class="hdr-right">
+      <span class="badge-var" style="background: var(--accent2);">CRITICAL_ERR</span>
+    </div>
+  </header>
+
+  <div class="err-container">
+    <div class="glitch-title">404</div>
+    <div class="glitch-subtitle">Lucrarea 1: Conexiune întreruptă / Fişier inexistent</div>
+
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="term-dot r"></div>
+        <div class="term-dot y"></div>
+        <div class="term-dot g"></div>
+        <span class="term-title">SYS_DIAGNOSTIC_CONSOLE v4.0.4</span>
+      </div>
+      <div id="terminalBody">
+        <div class="term-line">
+          <span class="prompt">></span>
+          <span>inițializez scanarea laboratorului LL1...</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">></span>
+          <span class="error-text">[ERROR] Fişierul solicitat "/ll1.html" nu a fost detectat în directorul principal.</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">></span>
+          <span class="error-text">[STATUS] Cod Eroare: 404 (Not Found).</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">></span>
+          <span>Sfat: Lucrarea de Laborator Nr. 1 a fost dezactivată sau înlocuită. Accesați restul lucrărilor din meniul principal.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="cyber-btn primary" onclick="location.href='index.html'">
+        ⬅ Înapoi la Tabloul de Bord
+      </button>
+      <button class="cyber-btn" onclick="runDiagnostics()">
+        ⚡ Rulare Diagnosticare
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function runDiagnostics() {
+      const term = document.getElementById('terminalBody');
+      term.innerHTML += `
+        <div class="term-line"><span class="prompt">></span><span>Scanare suplimentară pornită...</span></div>
+      `;
+      setTimeout(() => {
+        term.innerHTML += `
+          <div class="term-line"><span class="prompt">></span><span>Se verifică starea resurselor sistem...</span></div>
+        `;
+        term.scrollTop = term.scrollHeight;
+      }, 500);
+
+      setTimeout(() => {
+        term.innerHTML += `
+          <div class="term-line"><span class="prompt">></span><span class="success-text">[OK] LL2 (BCD → 7 Segmente) funcțional.</span></div>
+          <div class="term-line"><span class="prompt">></span><span class="success-text">[OK] LL3 (Multiplexoare) funcțional.</span></div>
+          <div class="term-line"><span class="prompt">></span><span class="success-text">[OK] LL4 (Circuite Bistabile) funcțional.</span></div>
+          <div class="term-line"><span class="prompt">></span><span class="success-text">[OK] LL5 (Registre de deplasare) funcțional.</span></div>
+          <div class="term-line"><span class="prompt">></span><span class="success-text">[OK] LL6 (Numărătoare) funcțional.</span></div>
+          <div class="term-line"><span class="prompt">></span><span class="error-text">[FAIL] LL1 - Semnal corupt. Recomandat să părăsiți această locație.</span></div>
+        `;
+        term.scrollTop = term.scrollHeight;
+      }, 1200);
+    }
+  </script>
+</body>
+</html>
